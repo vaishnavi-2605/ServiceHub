@@ -83,7 +83,7 @@
               id="live-map-iframe"
               class="live-map-iframe"
               title="Live Location Map"
-              src="https://maps.google.com/maps?q={{ booking.latitude }},{{ booking.longitude }}&z=15&output=embed"
+              src="https://maps.google.com/maps?q={{ booking.latitude }},{{ booking.longitude }}&z=15&output=embed&hl=en&gl=in"
               width="100%"
               height="280"
               loading="lazy"
@@ -338,8 +338,8 @@
       function updateUserLink(lat, lng) {
         if (!canViewUserLocation) return;
         if (!linkEl || !lat || !lng) return;
-        var url = 'https://maps.google.com/?q=' + lat + ',' + lng;
-        var embedUrl = 'https://maps.google.com/maps?q=' + lat + ',' + lng + '&z=15&output=embed';
+        var url = 'https://maps.google.com/?q=' + lat + ',' + lng + '&hl=en&gl=in';
+        var embedUrl = 'https://maps.google.com/maps?q=' + lat + ',' + lng + '&z=15&output=embed&hl=en&gl=in';
         latestLat = lat;
         latestLng = lng;
 
@@ -368,7 +368,7 @@
 
       function updateProviderLink(lat, lng) {
         if (!providerLinkEl || !lat || !lng) return;
-        var url = 'https://maps.google.com/?q=' + lat + ',' + lng;
+        var url = 'https://maps.google.com/?q=' + lat + ',' + lng + '&hl=en&gl=in';
         latestProviderLat = lat;
         latestProviderLng = lng;
 
@@ -399,8 +399,12 @@
           method: 'POST',
           headers: { 'X-CSRFToken': getCookie('csrftoken') },
           body: formData
-        }).then(function () {
-          updateUserLink(lat, lng);
+        }).then(function (resp) {
+          return resp.json();
+        }).then(function (data) {
+          if (data && data.ok) {
+            updateUserLink(lat, lng);
+          }
         });
       }
 
@@ -413,8 +417,12 @@
           method: 'POST',
           headers: { 'X-CSRFToken': getCookie('csrftoken') },
           body: formData
-        }).then(function () {
-          updateProviderLink(lat, lng);
+        }).then(function (resp) {
+          return resp.json();
+        }).then(function (data) {
+          if (data && data.ok) {
+            updateProviderLink(lat, lng);
+          }
         });
       }
 

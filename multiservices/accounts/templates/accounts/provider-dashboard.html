@@ -118,7 +118,7 @@
                 {% if booking.provider_marked_done or booking.status == 'completed' %}
                   Hidden after completion
                 {% elif booking.latitude and booking.longitude %}
-                  <a href="https://maps.google.com/?q={{ booking.latitude }},{{ booking.longitude }}" target="_blank" rel="noopener">Live</a>
+                  <a href="https://maps.google.com/?q={{ booking.latitude }},{{ booking.longitude }}&hl=en&gl=in" target="_blank" rel="noopener">Live</a>
                 {% elif booking.service_address %}
                   {{ booking.service_address }}
                 {% else %}
@@ -142,7 +142,7 @@
                 {% if booking.provider_marked_done or booking.status == 'completed' %}
                   Hidden after completion
                 {% elif booking.latitude and booking.longitude %}
-                  <a href="https://maps.google.com/?q={{ booking.latitude }},{{ booking.longitude }}" target="_blank" rel="noopener">Live</a>
+                  <a href="https://maps.google.com/?q={{ booking.latitude }},{{ booking.longitude }}&hl=en&gl=in" target="_blank" rel="noopener">Live</a>
                 {% elif booking.service_address %}
                   {{ booking.service_address }}
                 {% else %}

@@ -16,6 +16,11 @@ from .models import Service
 from .forms import ProviderServiceForm
 from .constants import DEFAULT_CATEGORIES, get_category_icon, get_category_match_terms, normalize_category_name
 
+INDIA_LAT_MIN = Decimal('6.0')
+INDIA_LAT_MAX = Decimal('38.5')
+INDIA_LNG_MIN = Decimal('68.0')
+INDIA_LNG_MAX = Decimal('98.0')
+
 
 # def hello(request):
 #     return HttpResponse('Hello, welcome to the services app!')
@@ -55,6 +60,13 @@ def _is_time_in_window(target_time, start_time, end_time):
     if start_time <= end_time:
         return start_time <= target_time <= end_time
     return target_time >= start_time or target_time <= end_time
+
+
+def _is_india_coordinate(lat_value, lng_value):
+    return (
+        INDIA_LAT_MIN <= lat_value <= INDIA_LAT_MAX
+        and INDIA_LNG_MIN <= lng_value <= INDIA_LNG_MAX
+    )
 
 
 def service(request):
@@ -121,9 +133,15 @@ def service(request):
     for s in services_list:
         stats = ratings_map.get(s.id)
         profile = profile_map.get(s.provider_id)
-        s.avg_rating = round(float(stats['avg_rating']), 1) if stats and stats['avg_rating'] is not None else 3.0
-        s.is_default_rating = not (stats and stats['avg_rating'] is not None)
-        s.review_count = stats['review_count'] if stats else 0
+        review_count = stats['review_count'] if stats else 0
+        if stats and stats['avg_rating'] is not None and review_count:
+            weighted_avg = (float(stats['avg_rating']) * review_count + 3.0) / (review_count + 1)
+            s.avg_rating = round(weighted_avg, 1)
+            s.is_default_rating = False
+        else:
+            s.avg_rating = 3.0
+            s.is_default_rating = True
+        s.review_count = review_count
         s.display_name = normalize_category_name(s.name)
         s.category_icon = get_category_icon(s.display_name)
         s.provider_image_url = profile.profile_image.url if profile and profile.profile_image else None
@@ -195,9 +213,14 @@ def service_detail(request, service_id):
         count=Count('id')
     )
 
-    avg_rating = round(float(summary['avg']), 1) if summary['avg'] is not None else 3.0
-    is_default_rating = summary['avg'] is None
     review_count = summary['count'] or 0
+    if summary['avg'] is not None and review_count:
+        weighted_avg = (float(summary['avg']) * review_count + 3.0) / (review_count + 1)
+        avg_rating = round(weighted_avg, 1)
+        is_default_rating = False
+    else:
+        avg_rating = 3.0
+        is_default_rating = True
     return render(request, 'services/provider-detail.html', {
         'provider': service_obj.provider,
         'service': service_obj,
@@ -310,6 +333,9 @@ def create_booking(request, service_id):
             try:
                 lat_value = Decimal(lat_raw)
                 lng_value = Decimal(lng_raw)
+                if not _is_india_coordinate(lat_value, lng_value):
+                    lat_value = None
+                    lng_value = None
             except InvalidOperation:
                 lat_value = None
                 lng_value = None
@@ -363,4 +389,3 @@ def create_booking(request, service_id):
         return redirect('booking_status', booking_id=booking.id)
 
     return redirect('service_detail', service_id=service_obj.id)
-

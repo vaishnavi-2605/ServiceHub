@@ -12,6 +12,19 @@ from .models import Booking, BookingReport
 
 
 # Create your views here.
+def _parse_lat_lng(lat_raw, lng_raw):
+    lat_text = (lat_raw or '').strip().replace(',', '.')
+    lng_text = (lng_raw or '').strip().replace(',', '.')
+    lat_value = Decimal(lat_text)
+    lng_value = Decimal(lng_text)
+    if not lat_value.is_finite() or not lng_value.is_finite():
+        raise InvalidOperation
+    if lat_value < Decimal('-90') or lat_value > Decimal('90'):
+        raise InvalidOperation
+    if lng_value < Decimal('-180') or lng_value > Decimal('180'):
+        raise InvalidOperation
+    return lat_value, lng_value
+
 
 def _is_provider_allowed(user):
     return user.role == 'provider' and user.is_active and user.provider_status == 'approved'
@@ -43,10 +56,10 @@ def booking_status(request, booking_id):
         and booking.longitude is not None
         and not hide_user_location_for_provider
     ):
-        user_map_url = f"https://maps.google.com/?q={booking.latitude},{booking.longitude}"
+        user_map_url = f"https://maps.google.com/?q={booking.latitude},{booking.longitude}&hl=en&gl=in"
 
     if booking.provider_latitude is not None and booking.provider_longitude is not None:
-        provider_map_url = f"https://maps.google.com/?q={booking.provider_latitude},{booking.provider_longitude}"
+        provider_map_url = f"https://maps.google.com/?q={booking.provider_latitude},{booking.provider_longitude}&hl=en&gl=in"
 
     latest_notification = (
         Notification.objects.filter(user=request.user)
@@ -82,8 +95,7 @@ def update_live_location(request, booking_id):
     lng_raw = request.POST.get('longitude', '').strip()
 
     try:
-        lat_value = Decimal(lat_raw)
-        lng_value = Decimal(lng_raw)
+        lat_value, lng_value = _parse_lat_lng(lat_raw, lng_raw)
     except (InvalidOperation, ValueError):
         return JsonResponse({'ok': False, 'error': 'invalid_coordinates'}, status=400)
 
@@ -113,8 +125,7 @@ def update_provider_live_location(request, booking_id):
     lng_raw = request.POST.get('longitude', '').strip()
 
     try:
-        lat_value = Decimal(lat_raw)
-        lng_value = Decimal(lng_raw)
+        lat_value, lng_value = _parse_lat_lng(lat_raw, lng_raw)
     except (InvalidOperation, ValueError):
         return JsonResponse({'ok': False, 'error': 'invalid_coordinates'}, status=400)
 

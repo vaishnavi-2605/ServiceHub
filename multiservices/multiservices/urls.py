@@ -18,10 +18,12 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import HttpResponse
 
 from booking.core import views as core_views
 
 urlpatterns = [
+    path('favicon.ico', lambda request: HttpResponse(status=204), name='favicon'),
     path('', core_views.home, name='root'),
     path('home/', core_views.home, name='home'),
     path('admin/', admin.site.urls),

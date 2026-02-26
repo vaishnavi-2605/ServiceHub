@@ -2,7 +2,8 @@ from datetime import timedelta
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.db.models import Avg, Count, Q, Sum
+from django.db.models import Avg, Count, Min, Q, Sum
+from django.db.models.functions import Lower, Trim
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.urls import reverse
@@ -49,6 +50,7 @@ def _ensure_active_provider(request):
 #     return HttpResponse('Hello, and welcome to the accounts app!')
 
 
+@never_cache
 def signin(request):
     if request.user.is_authenticated:
         return _redirect_dashboard_for_role(request.user)
@@ -391,16 +393,34 @@ def admin_dashboard(request):
     target_progress = int(min((total_revenue / monthly_target) * 100, 100)) if monthly_target else 0
     target_remaining = max(monthly_target - int(total_revenue), 0)
 
-    chart_services = list(services_qs[:7])
-    max_chart_bookings = max((service.booking_count or 0 for service in chart_services), default=0)
+    # Build Sales Overview bars by normalized service name so duplicate services
+    # (e.g. "Cleaning" from multiple providers) roll up into one bar.
+    chart_services_raw = list(
+        Service.objects.annotate(normalized_name=Lower(Trim('name')))
+        .values('normalized_name')
+        .annotate(
+            name=Min('name'),
+            booking_count=Count('bookings', distinct=True),
+        )
+        .order_by('-booking_count', 'name')[:7]
+    )
+    chart_services = []
+    for item in chart_services_raw:
+        display_name = (item.get('name') or item.get('normalized_name') or 'Service').strip()
+        chart_services.append({
+            'name': display_name.title(),
+            'booking_count': item.get('booking_count', 0) or 0,
+        })
+
+    max_chart_bookings = max((service['booking_count'] for service in chart_services), default=0)
     if total_bookings == 0 and chart_services:
         for service in chart_services:
-            service.chart_height = 100
+            service['chart_height'] = 100
     else:
         if max_chart_bookings == 0:
             max_chart_bookings = 1
         for service in chart_services:
-            service.chart_height = int(((service.booking_count or 0) / max_chart_bookings) * 100)
+            service['chart_height'] = int(((service['booking_count'] or 0) / max_chart_bookings) * 100)
 
     recent_reports = BookingReport.objects.select_related('booking', 'user', 'provider').order_by('-created_at')[:15]
     top_services = list(services_qs[:5])
@@ -549,5 +569,3 @@ def update_profile(request):
         'provider_form': provider_form,
         'is_provider': request.user.role == 'provider',
     })
-
-
