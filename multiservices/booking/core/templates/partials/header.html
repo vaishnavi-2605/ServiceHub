@@ -1,0 +1,30 @@
+{% load static %}
+<header class="nav-bar">
+  <a href="{% url 'home' %}" class="logo">ServiceHub</a>
+  <div class="nav-links" id="nav-links">
+    <a href="{% url 'home' %}">Home</a>
+    <a href="{% url 'service' %}">Services</a>
+
+    {% if request.user.is_authenticated %}
+      {% if request.user.role == 'provider' %}
+        <a href="{% url 'provider_dashboard' %}">Dashboard</a>
+      {% elif request.user.role == 'user' %}
+        <a href="{% url 'user_dashboard' %}">Dashboard</a>
+      {% elif request.user.is_superuser %}
+        <a href="{% url 'admin_dashboard' %}">Admin Dashboard</a>
+      {% endif %}
+      <a href="{% url 'notifications_center' %}" class="nav-notification-link">
+        Notifications
+        {% if has_unread_notifications %}
+          <span class="nav-notification-dot" aria-hidden="true"></span>
+        {% endif %}
+      </a>
+      <a href="{% url 'logout' %}" class="btn-nav btn-outline">Logout</a>
+    {% else %}
+      <a href="{% url 'signin' %}" class="btn-nav btn-outline">Login</a>
+      <a href="{% url 'signup' %}" class="btn-nav btn-primary">Register</a>
+    {% endif %}
+  </div>
+</header>
+
+

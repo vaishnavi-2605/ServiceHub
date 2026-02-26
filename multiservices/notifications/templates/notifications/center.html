@@ -1,0 +1,45 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notifications</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=20260224-6">
+</head>
+<body>
+  {% include 'partials/header.html' %}
+
+  <main class="container">
+    <div class="page-heading">
+      <a href="{% url 'home' %}" class="btn btn-secondary back-btn" aria-label="Back to Home" title="Back to Home">&larr;</a>
+      <h1>Notifications</h1>
+    </div>
+
+    <div class="notification-tabs">
+      <a href="{% url 'notifications_center' %}?tab=all" class="btn {% if tab == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">All</a>
+      <a href="{% url 'notifications_center' %}?tab=unread" class="btn {% if tab == 'unread' %}btn-primary{% else %}btn-secondary{% endif %}">Unread</a>
+      <a href="{% url 'mark_all_notifications_read' %}" class="btn btn-secondary">Mark All Read</a>
+    </div>
+
+    {% for note in notifications %}
+      <div class="card notification-card {% if not note.is_read %}notification-card-unread{% endif %}">
+        <div class="card-body notification-row">
+          <div>
+            <p class="notification-message">{{ note.message }}</p>
+            <small class="text-muted">{{ note.created_at|date:"d M Y h:i A" }}</small>
+          </div>
+          {% if not note.is_read %}
+            <a href="{% url 'mark_notification_read' note.id %}" class="btn btn-primary">Mark Read</a>
+          {% endif %}
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-muted">No notifications.</p>
+    {% endfor %}
+  </main>
+
+  {% include 'partials/footer.html' %}
+</body>
+</html>
+

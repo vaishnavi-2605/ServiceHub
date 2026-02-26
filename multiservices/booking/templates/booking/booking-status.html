@@ -1,0 +1,494 @@
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booking Status - Service Provider Platform</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=20260225-1">
+</head>
+<body>
+  {% include 'partials/header.html' %}
+
+  <div id="toast-container"></div>
+
+  <main class="container">
+    <h1 class="booking-status-title">Booking status</h1>
+
+    {% if request.GET.otp == 'accepted' %}
+      <div class="toast toast-success toast-visible toast-auto booking-inline-toast">
+        OTP accepted. Service is now in progress.
+        <button type="button" class="toast-close" aria-label="Close">×</button>
+      </div>
+    {% elif request.GET.otp == 'invalid' %}
+      <div class="toast toast-error toast-visible toast-auto booking-inline-toast">
+        OTP rejected. Please enter valid OTP.
+        <button type="button" class="toast-close" aria-label="Close">×</button>
+      </div>
+    {% elif request.GET.reported == '1' %}
+      <div class="toast toast-success toast-visible toast-auto booking-inline-toast">
+        Report submitted successfully. Admin will review this provider.
+        <button type="button" class="toast-close" aria-label="Close">×</button>
+      </div>
+    {% elif request.GET.report_error == '1' %}
+      <div class="toast toast-error toast-visible toast-auto booking-inline-toast">
+        Please select a reason before submitting the report.
+        <button type="button" class="toast-close" aria-label="Close">×</button>
+      </div>
+    {% endif %}
+
+    <p class="booking-summary" id="booking-summary">
+      Booking {{ booking.id }} - {{ booking.provider.first_name|default:booking.provider.username }} - {{ booking.date|date:"d M Y, h:i A" }} - &#8377;{{ booking.amount }}
+    </p>
+
+    <div class="card booking-card-gap">
+      <div class="card-body">
+        <p><strong>Service Address:</strong> {{ booking.service_address|default:'Not provided' }}</p>
+        <p><strong>User Live Location:</strong> {% if booking.use_live_location %}Enabled{% else %}Not enabled{% endif %}</p>
+        <p id="live-location-line">
+          {% if is_provider and booking.provider_marked_done or is_provider and booking.status == 'completed' %}
+            <span id="live-map-link">User live location is hidden after service completion.</span>
+          {% elif user_map_url %}
+            <a id="live-map-link" href="{{ user_map_url }}" target="_blank" rel="noopener">Open User Live Location in Maps</a>
+          {% else %}
+            <span id="live-map-link">User live location not available yet.</span>
+          {% endif %}
+        </p>
+
+        <p class="booking-provider-live-title"><strong>Provider Live Location:</strong></p>
+        <p id="provider-location-line">
+          {% if provider_map_url %}
+            <a id="provider-map-link" href="{{ provider_map_url }}" target="_blank" rel="noopener">Open Provider Live Location in Maps</a>
+          {% else %}
+            <span id="provider-map-link">Provider live location not available yet.</span>
+          {% endif %}
+        </p>
+
+        <div class="booking-live-wrap">
+          <p id="live-location-label" class="booking-live-label">
+            {% if is_provider and booking.provider_marked_done or is_provider and booking.status == 'completed' %}
+              User live location is hidden after service completion.
+            {% elif booking.latitude and booking.longitude %}
+              Tracking user location: {{ booking.latitude }}, {{ booking.longitude }}
+            {% else %}
+              Tracking user location: waiting for coordinates.
+            {% endif %}
+          </p>
+          {% if is_provider and booking.provider_marked_done or is_provider and booking.status == 'completed' %}
+            <div id="live-map-iframe-placeholder" class="map-placeholder map-placeholder-sm">
+              User live location is hidden after service completion.
+            </div>
+          {% elif booking.latitude and booking.longitude %}
+            <iframe
+              id="live-map-iframe"
+              class="live-map-iframe"
+              title="Live Location Map"
+              src="https://maps.google.com/maps?q={{ booking.latitude }},{{ booking.longitude }}&z=15&output=embed"
+              width="100%"
+              height="280"
+              loading="lazy"
+            ></iframe>
+          {% else %}
+            <div id="live-map-iframe-placeholder" class="map-placeholder map-placeholder-sm">
+              Live map will appear when location is available.
+            </div>
+          {% endif %}
+          <div class="booking-map-controls">
+            <button type="button" id="recenter-map-btn" class="btn btn-secondary">Recenter Map</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="progress-steps">
+      <div class="progress-step {% if booking.status == 'pending' %}active{% endif %}"><span class="step-num">1</span>Pending</div>
+      <div class="progress-step {% if booking.status == 'accepted' or booking.status == 'in_progress' or booking.status == 'completed' %}active{% endif %}"><span class="step-num">2</span>Accepted</div>
+      <div class="progress-step {% if booking.status == 'in_progress' or booking.status == 'completed' %}active{% endif %}"><span class="step-num">3</span>In Progress</div>
+      <div class="progress-step {% if booking.provider_marked_done or booking.status == 'completed' %}active{% endif %}"><span class="step-num">4</span>Provider Done</div>
+      <div class="progress-step {% if booking.status == 'completed' %}active{% endif %}"><span class="step-num">5</span>Paid + Completed</div>
+    </div>
+
+    <p class="booking-current-status">
+      Current Status: <strong>{{ booking.get_status_display }}</strong>
+    </p>
+
+    {% if is_user and booking.status == 'pending' %}
+      <form method="post" action="{% url 'user_reject_booking' booking.id %}" class="booking-form-gap" onsubmit="return confirm('Cancel this booking request?');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary">Cancel Booking Request</button>
+      </form>
+    {% endif %}
+
+    {% if is_provider and booking.status == 'pending' or is_provider and booking.status == 'accepted' %}
+      <form method="post" action="{% url 'reject_booking' booking.id %}" class="booking-form-gap" onsubmit="return confirm('Reject this booking request?');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary">Reject Booking Request</button>
+      </form>
+    {% endif %}
+
+    {% if is_user and booking.otp and booking.status != 'rejected' %}
+      <div class="card booking-card-gap">
+        <div class="card-body">
+          <h3>Share this OTP with provider on arrival</h3>
+          <p class="booking-otp-text">{{ booking.otp|default:'----' }}</p>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if booking.status == 'accepted' and is_provider %}
+      <div class="card booking-card-gap">
+        <div class="card-body">
+          <h3>Verify OTP from user to start service</h3>
+          <form method="post" action="{% url 'start_service' booking.id %}">
+            {% csrf_token %}
+            <input type="text" name="otp" maxlength="4" required placeholder="Enter OTP" class="form-control booking-otp-input">
+            <button type="submit" class="btn btn-primary">Verify & Start Service</button>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if booking.status == 'in_progress' and is_provider and not booking.provider_marked_done %}
+      <form method="post" action="{% url 'mark_done' booking.id %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success btn-block">Mark Service Done</button>
+      </form>
+    {% endif %}
+
+    {% if booking.status == 'in_progress' and is_user and booking.provider_marked_done and booking.payment_status != 'paid' %}
+      <div class="card booking-card-top-gap">
+        <div class="card-body">
+          <h3 class="booking-subtitle-gap">Complete Payment</h3>
+          <form method="post" action="{% url 'confirm_payment' booking.id %}">
+            {% csrf_token %}
+            <div class="form-group">
+              <label for="payment_mode">Payment Mode</label>
+              <select name="payment_mode" id="payment_mode" class="form-control" required>
+                <option value="">Select</option>
+                <option value="online">Online</option>
+                <option value="cash">Cash</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Confirm Payment</button>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if booking.status == 'completed' %}
+      <div class="card booking-card-top-gap">
+        <div class="card-body booking-paid-body">
+          <h2 class="booking-paid-title">Payment completed</h2>
+          <p>Amount paid: &#8377;{{ booking.amount }} via {{ booking.payment_mode|default:'-' }}</p>
+        </div>
+      </div>
+
+      {% if is_user and not booking.feedback_rating %}
+        <div class="card booking-card-top-gap">
+          <div class="card-body">
+            <h3 class="booking-subtitle-gap">Give Feedback</h3>
+            <form method="post" action="{% url 'submit_feedback' booking.id %}">
+              {% csrf_token %}
+              <div class="form-group">
+                <label>Rating</label>
+                <div class="rating-stars" role="radiogroup" aria-label="Rating">
+                  <input type="radio" id="rating-5" name="rating" value="5" required>
+                  <label for="rating-5" title="5 stars">&#9733;</label>
+                  <input type="radio" id="rating-4" name="rating" value="4">
+                  <label for="rating-4" title="4 stars">&#9733;</label>
+                  <input type="radio" id="rating-3" name="rating" value="3">
+                  <label for="rating-3" title="3 stars">&#9733;</label>
+                  <input type="radio" id="rating-2" name="rating" value="2">
+                  <label for="rating-2" title="2 stars">&#9733;</label>
+                  <input type="radio" id="rating-1" name="rating" value="1">
+                  <label for="rating-1" title="1 star">&#9733;</label>
+                </div>
+                <p class="rating-hint">Tap a star to rate.</p>
+              </div>
+              <div class="form-group">
+                <label for="feedback_text">Feedback</label>
+                <textarea id="feedback_text" name="feedback_text" rows="3" class="form-control" placeholder="Share your experience"></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary">Submit Feedback</button>
+            </form>
+          </div>
+        </div>
+      {% elif booking.feedback_rating %}
+        <div class="card booking-card-top-gap">
+          <div class="card-body">
+            <p><strong>Your Rating:</strong>
+                <span class="star-display">
+                {% for i in "12345" %}
+                  {% if booking.feedback_rating|default:0 >= forloop.counter %}&#9733;{% else %}&#9734;{% endif %}
+                {% endfor %}
+              </span>
+            </p>
+            <p><strong>Your Feedback:</strong> {{ booking.feedback_text|default:'-' }}</p>
+          </div>
+        </div>
+      {% endif %}
+
+      <div class="booking-back-wrap">
+        <a href="{% url 'user_dashboard' %}" class="btn btn-primary">Back to Dashboard</a>
+      </div>
+    {% endif %}
+
+    {% if is_user and booking.status != 'pending' %}
+      <div class="card booking-card-top-gap">
+        <div class="card-body">
+          <h3 class="booking-subtitle-gap">Report Provider</h3>
+          {% if existing_report %}
+            <p class="text-muted booking-report-note">
+              Report submitted on {{ existing_report.created_at|date:"d M Y h:i A" }}.
+            </p>
+            <p><strong>Reason:</strong> {{ existing_report.reason }}</p>
+            <p><strong>Details:</strong> {{ existing_report.details|default:'-' }}</p>
+          {% else %}
+            <form method="post" action="{% url 'submit_report' booking.id %}">
+              {% csrf_token %}
+              <div class="form-group">
+                <label for="report-reason">Reason</label>
+                <select id="report-reason" name="reason" class="form-control" required>
+                  <option value="">Select reason</option>
+                  <option value="Unprofessional behavior">Unprofessional behavior</option>
+                  <option value="Late / no-show">Late / no-show</option>
+                  <option value="Poor service quality">Poor service quality</option>
+                  <option value="Overcharging issue">Overcharging issue</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="report-details">Details</label>
+                <textarea id="report-details" name="details" rows="3" class="form-control" placeholder="Write report details"></textarea>
+              </div>
+              <button type="submit" class="btn btn-danger">Submit Report</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+
+  </main>
+
+  {% include 'partials/footer.html' %}
+
+  <script>
+    (function () {
+      function bindToastAutoClose(toast) {
+        setTimeout(function () {
+          toast.classList.remove('toast-visible');
+          setTimeout(function () { toast.remove(); }, 300);
+        }, 5000);
+      }
+
+      function showToast(message, type) {
+        var container = document.getElementById('toast-container');
+        if (!container) return;
+        var toast = document.createElement('div');
+        toast.className = 'toast toast-visible toast-auto booking-inline-toast toast-' + (type || 'info');
+        toast.innerHTML = message + '<button type="button" class="toast-close" aria-label="Close">×</button>';
+        container.appendChild(toast);
+        bindToastAutoClose(toast);
+      }
+
+      var toasts = document.querySelectorAll('.toast-auto');
+      toasts.forEach(function (toast) {
+        bindToastAutoClose(toast);
+      });
+      document.addEventListener('click', function (event) {
+        if (!event.target.classList.contains('toast-close')) return;
+        var toast = event.target.closest('.toast');
+        if (toast) {
+          toast.classList.remove('toast-visible');
+          setTimeout(function () { toast.remove(); }, 300);
+        }
+      });
+
+      var bookingId = '{{ booking.id }}';
+      var isUser = '{{ is_user|yesno:"1,0" }}' === '1';
+      var isProvider = '{{ is_provider|yesno:"1,0" }}' === '1';
+      var latestNotificationId = parseInt('{{ latest_notification_id|default:0 }}', 10) || 0;
+      var canViewUserLocation = !(
+        isProvider
+        && ('{{ booking.provider_marked_done|yesno:"1,0" }}' === '1' || '{{ booking.status }}' === 'completed')
+      );
+      var useLiveLocation = '{{ booking.use_live_location|yesno:"1,0" }}' === '1';
+      var currentStatus = '{{ booking.status }}';
+
+      var linkEl = document.getElementById('live-map-link');
+      var providerLinkEl = document.getElementById('provider-map-link');
+      var mapIframe = document.getElementById('live-map-iframe');
+      var recenterBtn = document.getElementById('recenter-map-btn');
+      var locationLabel = document.getElementById('live-location-label');
+      
+      var latestLat = canViewUserLocation ? '{{ booking.latitude|default:"" }}' : '';
+      var latestLng = canViewUserLocation ? '{{ booking.longitude|default:"" }}' : '';
+      var latestProviderLat = '{{ booking.provider_latitude|default:"" }}';
+      var latestProviderLng = '{{ booking.provider_longitude|default:"" }}';
+      var userWorkToastShown = false;
+      var statusRefreshScheduled = false;
+
+      function getCookie(name) {
+        var value = '; ' + document.cookie;
+        var parts = value.split('; ' + name + '=');
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return '';
+      }
+
+      function updateUserLink(lat, lng) {
+        if (!canViewUserLocation) return;
+        if (!linkEl || !lat || !lng) return;
+        var url = 'https://maps.google.com/?q=' + lat + ',' + lng;
+        var embedUrl = 'https://maps.google.com/maps?q=' + lat + ',' + lng + '&z=15&output=embed';
+        latestLat = lat;
+        latestLng = lng;
+
+        if (linkEl.tagName === 'A') {
+          linkEl.href = url;
+          linkEl.textContent = 'Open User Live Location in Maps';
+        } else {
+          linkEl.outerHTML = '<a id="live-map-link" href="' + url + '" target="_blank" rel="noopener">Open User Live Location in Maps</a>';
+          linkEl = document.getElementById('live-map-link');
+        }
+
+        if (mapIframe) {
+          mapIframe.src = embedUrl;
+        } else {
+          var placeholder = document.getElementById('live-map-iframe-placeholder');
+          if (placeholder) {
+            placeholder.outerHTML = '<iframe id="live-map-iframe" class="live-map-iframe" title="Live Location Map" src="' + embedUrl + '" width="100%" height="280" loading="lazy"></iframe>';
+            mapIframe = document.getElementById('live-map-iframe');
+          }
+        }
+
+        if (locationLabel) {
+          locationLabel.textContent = 'Tracking user location: ' + lat + ', ' + lng;
+        }
+      }
+
+      function updateProviderLink(lat, lng) {
+        if (!providerLinkEl || !lat || !lng) return;
+        var url = 'https://maps.google.com/?q=' + lat + ',' + lng;
+        latestProviderLat = lat;
+        latestProviderLng = lng;
+
+        if (providerLinkEl.tagName === 'A') {
+          providerLinkEl.href = url;
+          providerLinkEl.textContent = 'Open Provider Live Location in Maps';
+        } else {
+          providerLinkEl.outerHTML = '<a id="provider-map-link" href="' + url + '" target="_blank" rel="noopener">Open Provider Live Location in Maps</a>';
+          providerLinkEl = document.getElementById('provider-map-link');
+        }
+      }
+
+      function recenterMap() {
+        if (isProvider && canViewUserLocation && latestLat && latestLng) {
+          updateUserLink(latestLat, latestLng);
+        }
+        if (isUser && latestProviderLat && latestProviderLng) {
+          updateProviderLink(latestProviderLat, latestProviderLng);
+        }
+      }
+
+      function postUserLocation(lat, lng) {
+        var formData = new FormData();
+        formData.append('latitude', lat);
+        formData.append('longitude', lng);
+
+        fetch('/booking/booking/' + bookingId + '/live-location/update/', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+          body: formData
+        }).then(function () {
+          updateUserLink(lat, lng);
+        });
+      }
+
+      function postProviderLocation(lat, lng) {
+        var formData = new FormData();
+        formData.append('latitude', lat);
+        formData.append('longitude', lng);
+
+        fetch('/booking/booking/' + bookingId + '/provider-live-location/update/', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+          body: formData
+        }).then(function () {
+          updateProviderLink(lat, lng);
+        });
+      }
+
+      function pollLocations() {
+        fetch('/booking/booking/' + bookingId + '/live-location/data/')
+          .then(function (resp) { return resp.json(); })
+          .then(function (data) {
+            if (!data || !data.ok) return;
+            if (data.status && data.status !== currentStatus && !statusRefreshScheduled) {
+              statusRefreshScheduled = true;
+              if (isUser && data.status === 'in_progress' && !userWorkToastShown) {
+                userWorkToastShown = true;
+                showToast('OTP accepted by provider. Work in progress.', 'success');
+              } else {
+                showToast('Booking status updated. Refreshing now...', 'success');
+              }
+              setTimeout(function () { window.location.reload(); }, 1400);
+            }
+            if (data.status) {
+              currentStatus = data.status;
+            }
+            if (data.latitude && data.longitude) {
+              updateUserLink(data.latitude, data.longitude);
+            }
+            if (data.provider_latitude && data.provider_longitude) {
+              updateProviderLink(data.provider_latitude, data.provider_longitude);
+            }
+          });
+      }
+
+      function pollNotifications() {
+        fetch('{% url "notifications_poll" %}?since_id=' + latestNotificationId, { credentials: 'same-origin' })
+          .then(function (resp) { return resp.ok ? resp.json() : null; })
+          .then(function (data) {
+            if (!data || !data.ok) return;
+            if (Array.isArray(data.notifications)) {
+              data.notifications.forEach(function (note) {
+                showToast(note.message, 'success');
+              });
+            }
+            if (data.latest_id) latestNotificationId = data.latest_id;
+          })
+          .catch(function () {});
+      }
+
+      if ((currentStatus === 'accepted' || currentStatus === 'in_progress')) {
+        if (isUser && useLiveLocation && navigator.geolocation) {
+          navigator.geolocation.watchPosition(function (position) {
+            var lat = position.coords.latitude.toFixed(7);
+            var lng = position.coords.longitude.toFixed(7);
+            postUserLocation(lat, lng);
+          });
+        }
+
+        if (isProvider && navigator.geolocation) {
+          navigator.geolocation.watchPosition(function (position) {
+            var lat = position.coords.latitude.toFixed(7);
+            var lng = position.coords.longitude.toFixed(7);
+            postProviderLocation(lat, lng);
+          });
+        }
+      }
+
+      pollLocations();
+      setInterval(pollLocations, 7000);
+      setInterval(pollNotifications, 7000);
+
+      if (recenterBtn) {
+        recenterBtn.addEventListener('click', recenterMap);
+      }
+    })();
+  </script>
+</body>
+</html>
+
+
+

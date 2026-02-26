@@ -1,0 +1,158 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Dashboard - Service Provider Platform</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=20260225-1">
+</head>
+<body class="dashboard-page" id="user-dashboard-page">
+  {% include 'partials/header.html' %}
+
+  <div id="toast-container"></div>
+
+  <main class="container">
+    <div class="page-heading">
+      <a href="{% url 'home' %}" class="btn btn-secondary back-btn" aria-label="Back to Home" title="Back to Home">&larr;</a>
+      <h1>User dashboard</h1>
+    </div>
+    {% if request.GET.updated == '1' %}
+      <div class="toast toast-success toast-visible toast-auto toast-inline">
+        Profile updated successfully.
+        <button type="button" class="toast-close" aria-label="Close">×</button>
+      </div>
+    {% endif %}
+    <p class="dashboard-intro">
+      Welcome, {{ request.user.first_name|default:request.user.username }}! Your bookings and service history.
+    </p>
+
+    <div class="dashboard-top">
+      <div class="card profile-card">
+        <div class="card-body">
+          <div class="profile-row">
+            <div class="profile-avatar-wrap">
+              <div class="profile-avatar profile-avatar-fallback">
+                {{ request.user.first_name|default:request.user.username|slice:":1"|upper }}
+              </div>
+            </div>
+            <div class="profile-info">
+              <h3>{{ request.user.first_name|default:request.user.username }}</h3>
+              <p class="muted">@{{ request.user.username }} | {{ request.user.email }}</p>
+              <p class="muted">{{ request.user.mobile_no|default:"-" }}</p>
+              <p class="muted">{{ request.user.address|default:"-" }}</p>
+            </div>
+          </div>
+          <div class="profile-actions">
+            <a href="{% url 'profile_update' %}" class="btn btn-primary">Update Profile</a>
+            <a href="{% url 'service' %}" class="btn btn-secondary">Book a New Service</a>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="dash-grid">
+          <div class="stat-card">
+            <div class="value">{{ total_bookings }}</div>
+            <div class="label">Total bookings</div>
+          </div>
+          <div class="stat-card">
+            <div class="value">{{ completed_bookings }}</div>
+            <div class="label">Completed</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="dashboard-section-title">Completed / rejected history</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Booking ID</th>
+            <th>Service</th>
+            <th>Provider</th>
+            <th>Date & time</th>
+            <th>Amount</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for booking in history_bookings %}
+            <tr>
+              <td>{{ booking.id }}</td>
+              <td>{{ booking.service_name }}</td>
+              <td>{{ booking.provider.first_name|default:booking.provider.username }}</td>
+              <td>{{ booking.date|date:"d M Y h:i A" }}</td>
+              <td>&#8377;{{ booking.amount }}</td>
+              <td><span class="badge badge-{{ booking.status }}">{{ booking.status|title }}</span></td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="text-muted">No history yet.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  {% include 'partials/footer.html' %}
+
+  <script>
+    (function () {
+      var latestNotificationId = parseInt('{{ latest_notification_id|default:0 }}', 10) || 0;
+
+      function bindToastAutoClose(toast) {
+        setTimeout(function () {
+          toast.classList.remove('toast-visible');
+          setTimeout(function () { toast.remove(); }, 300);
+        }, 10000);
+      }
+
+      function showToast(message, type) {
+        var container = document.getElementById('toast-container');
+        if (!container) return;
+        var toast = document.createElement('div');
+        toast.className = 'toast toast-visible toast-auto toast-' + (type || 'success');
+        toast.innerHTML = message + '<button type="button" class="toast-close" aria-label="Close">×</button>';
+        container.appendChild(toast);
+        bindToastAutoClose(toast);
+      }
+
+      function pollNotifications() {
+        fetch('{% url "notifications_poll" %}?since_id=' + latestNotificationId, { credentials: 'same-origin' })
+          .then(function (resp) { return resp.ok ? resp.json() : null; })
+          .then(function (data) {
+            if (!data || !data.ok) return;
+            if (Array.isArray(data.notifications)) {
+              data.notifications.forEach(function (note) {
+                showToast(note.message, 'success');
+              });
+            }
+            if (data.latest_id) latestNotificationId = data.latest_id;
+          })
+          .catch(function () {});
+      }
+
+      var toasts = document.querySelectorAll('.toast-auto');
+      toasts.forEach(function (toast) {
+        bindToastAutoClose(toast);
+      });
+      document.addEventListener('click', function (event) {
+        if (!event.target.classList.contains('toast-close')) return;
+        var toast = event.target.closest('.toast');
+        if (toast) {
+          toast.classList.remove('toast-visible');
+          setTimeout(function () { toast.remove(); }, 300);
+        }
+      });
+
+      setInterval(pollNotifications, 6000);
+    })();
+  </script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,172 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Provider & Booking - Service Provider Platform</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=20260225-1">
+</head>
+<body>
+  {% include 'partials/header.html' %}
+
+  <div id="toast-container"></div>
+
+  <main class="container">
+    <div class="card provider-detail-main-card">
+      <div class="card-body">
+        <div class="provider-detail-header">
+          {% if profile and profile.profile_image %}
+            <div class="provider-avatar-lg cover js-bg-image" data-bg-image="{{ profile.profile_image.url }}"></div>
+          {% elif service.image %}
+            <div class="provider-avatar-lg cover js-bg-image" data-bg-image="{{ service.image.url }}"></div>
+          {% else %}
+            <div class="provider-avatar-lg">??</div>
+          {% endif %}
+          <div>
+            <h1>{{ provider.first_name|default:provider.username }}</h1>
+            <p class="category">{{ service.display_name|default:service.name }}</p>
+            <p>
+              <span class="rating-badge">&#9733; {{ avg_rating|default:'3.0' }}</span>
+              &nbsp;|&nbsp; &#8377;{{ service.price }}
+            </p>
+            <p class="provider-description">
+              <strong>Available Time:</strong> {{ service.available_time|default:"Not specified" }}
+            </p>
+            <p class="provider-description">{{ service.description }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card provider-detail-feedback-card">
+      <div class="card-body">
+        <h3 class="provider-feedback-title">Recent Feedback</h3>
+        {% for rv in reviews %}
+          <p class="provider-feedback-item">
+            <strong>{{ rv.user.first_name|default:rv.user.username }}</strong> - {{ rv.feedback_rating }}/5
+            <br>{{ rv.feedback_text|default:'No comment' }}
+          </p>
+        {% empty %}
+          <p class="text-muted">No feedback yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h2 class="provider-book-title">Book this provider</h2>
+        <form method="post" action="{% url 'create_booking' service.id %}" class="booking-form">
+          {% csrf_token %}
+          <div class="form-row">
+            <div class="form-group">
+              <label for="book-date">Date</label>
+              <input type="date" id="book-date" name="date" class="form-control" min="{{ today_iso }}" required>
+            </div>
+            <div class="form-group">
+              <label for="book-time">Time</label>
+              <input type="time" id="book-time" name="time" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="book-address">Service location (address)</label>
+            <input type="text" id="book-address" name="address" class="form-control" placeholder="Enter full address" required>
+          </div>
+
+          <div class="toggle-wrap">
+            <span class="toggle-switch" id="live-location-toggle" role="button" tabindex="0" aria-label="Use live location"></span>
+            <label for="live-location-toggle">Use live location</label>
+          </div>
+          <input type="hidden" name="use_live_location" id="use-live-location" value="0">
+          <input type="hidden" name="latitude" id="latitude" value="">
+          <input type="hidden" name="longitude" id="longitude" value="">
+
+          <div class="form-group">
+            <label for="book-notes">Booking notes (optional)</label>
+            <textarea id="book-notes" name="notes" class="form-control" rows="2" placeholder="Any special instructions"></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block">Confirm booking</button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  {% include 'partials/footer.html' %}
+
+  <script>
+    (function () {
+      function bindToastAutoClose(toast) {
+        setTimeout(function () {
+          toast.classList.remove('toast-visible');
+          setTimeout(function () { toast.remove(); }, 300);
+        }, 3000);
+      }
+
+      document.addEventListener('click', function (event) {
+        if (!event.target.classList.contains('toast-close')) return;
+        var toast = event.target.closest('.toast');
+        if (toast) {
+          toast.classList.remove('toast-visible');
+          setTimeout(function () { toast.remove(); }, 300);
+        }
+      });
+
+      var bookingError = '{{ request.GET.booking_error|default:"" }}';
+      if (bookingError === 'unavailable_time' || bookingError === 'invalid_datetime' || bookingError === 'past_date') {
+        var container = document.getElementById('toast-container');
+        if (container) {
+          var toast = document.createElement('div');
+          toast.className = 'toast toast-error toast-visible';
+          var msg = bookingError === 'past_date'
+            ? 'Booking failed. Please select today or a future date.'
+            : 'Booking failed. Enter valid time.';
+          toast.innerHTML = msg + '<button type="button" class="toast-close" aria-label="Close">×</button>';
+          container.appendChild(toast);
+          bindToastAutoClose(toast);
+        }
+      }
+
+      document.querySelectorAll('.js-bg-image').forEach(function (el) {
+        var url = el.getAttribute('data-bg-image');
+        if (!url) return;
+        el.style.backgroundImage = "url('" + url + "')";
+      });
+
+      var toggle = document.getElementById('live-location-toggle');
+      var useLiveInput = document.getElementById('use-live-location');
+      var latInput = document.getElementById('latitude');
+      var lngInput = document.getElementById('longitude');
+
+      function captureLocation() {
+        if (!navigator.geolocation) {
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(function (position) {
+          latInput.value = position.coords.latitude.toFixed(7);
+          lngInput.value = position.coords.longitude.toFixed(7);
+        });
+      }
+
+      toggle.addEventListener('click', function () {
+        this.classList.toggle('active');
+        var enabled = this.classList.contains('active');
+        useLiveInput.value = enabled ? '1' : '0';
+
+        if (enabled) {
+          captureLocation();
+        } else {
+          latInput.value = '';
+          lngInput.value = '';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
+
+
+
+
+

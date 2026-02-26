@@ -1,0 +1,147 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report Review - Admin</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=20260225-2">
+</head>
+<body class="dashboard-page admin-provider-page">
+  {% include 'partials/header.html' %}
+
+  <main class="container">
+    <div class="page-heading">
+      <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary back-btn" aria-label="Back to Admin Dashboard" title="Back to Admin Dashboard">&larr;</a>
+      <h1>Report #{{ report.id }}</h1>
+    </div>
+
+    <div class="card mb-1">
+      <div class="card-body">
+        <h2 class="dashboard-section-title">Report Information</h2>
+        <p><strong>Booking:</strong> #{{ report.booking.id }}</p>
+        <p><strong>Provider:</strong> {{ provider.first_name|default:provider.username }}</p>
+        <p><strong>Reported By:</strong> {{ report.user.first_name|default:report.user.username }}</p>
+        <p><strong>Reason:</strong> {{ report.reason }}</p>
+        <p><strong>Details:</strong> {{ report.details|default:'-' }}</p>
+        <p><strong>Date:</strong> {{ report.created_at|date:"d M Y h:i A" }}</p>
+      </div>
+    </div>
+
+    <div class="card mb-1 admin-provider-hero">
+      <div class="card-body">
+        <div class="admin-provider-hero-grid">
+          <div>
+            <h2 class="dashboard-section-title">Provider Profile</h2>
+            <div class="admin-provider-info-list">
+              <p><strong>Name:</strong> {{ provider.first_name|default:provider.username }}</p>
+              <p><strong>Username:</strong> {{ provider.username }}</p>
+              <p><strong>Email:</strong> {{ provider.email|default:'-' }}</p>
+              <p><strong>Phone:</strong> {{ provider.mobile_no|default:profile.phone|default:'-' }}</p>
+              <p><strong>Address:</strong> {{ provider.address|default:profile.address|default:'-' }}</p>
+              <p>
+                <strong>Status:</strong>
+                {% if provider.is_active %}
+                  <span class="badge badge-live">Active</span>
+                {% else %}
+                  <span class="badge badge-inactive">Removed</span>
+                {% endif %}
+              </p>
+            </div>
+          </div>
+
+          <div class="admin-provider-photo-wrap">
+            {% if profile and profile.profile_image %}
+              <img src="{{ profile.profile_image.url }}" alt="Provider image" class="admin-provider-photo">
+            {% else %}
+              <div class="admin-provider-photo admin-provider-photo-fallback">
+                {{ provider.first_name|default:provider.username|slice:":1"|upper }}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-1 admin-provider-doc-card">
+      <div class="card-body">
+        <h2 class="dashboard-section-title">Documents</h2>
+
+        <div class="admin-doc-grid">
+          <div class="admin-doc-item">
+            <h3>Certificate</h3>
+            {% if profile and profile.certificate %}
+              <a href="{{ profile.certificate.url }}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">Open Certificate</a>
+            {% else %}
+              <p class="text-muted">Not uploaded</p>
+            {% endif %}
+          </div>
+
+          <div class="admin-doc-item">
+            <h3>Aadhaar</h3>
+            {% if profile and profile.aadhaar_card %}
+              <a href="{{ profile.aadhaar_card.url }}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">Open Aadhaar</a>
+            {% else %}
+              <p class="text-muted">Not uploaded</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-1">
+      <div class="card-body">
+        <h2 class="dashboard-section-title">Provider Booking History</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Booking ID</th>
+                <th>User</th>
+                <th>Service</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Payment</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in provider_bookings %}
+                <tr>
+                  <td>#{{ item.id }}</td>
+                  <td>{{ item.user.first_name|default:item.user.username }}</td>
+                  <td>{{ item.service_name }}</td>
+                  <td>{{ item.date|date:"d M Y h:i A" }}</td>
+                  <td>{{ item.status|title }}</td>
+                  <td>{{ item.payment_status|title }}</td>
+                  <td>&#8377;{{ item.amount }}</td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="7" class="text-muted">No booking history found.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h2 class="dashboard-section-title">Admin Action</h2>
+        {% if provider.is_active %}
+          <form method="post" action="{% url 'admin_remove_provider' provider.id %}" onsubmit="return confirm('Delete this provider account? This provider will not be able to login.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Delete Provider Account</button>
+          </form>
+        {% else %}
+          <p class="text-muted">Provider account already removed.</p>
+        {% endif %}
+      </div>
+    </div>
+  </main>
+
+  {% include 'partials/footer.html' %}
+</body>
+</html>

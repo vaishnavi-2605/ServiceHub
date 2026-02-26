@@ -1,0 +1,95 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Update Profile</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=20260224-6">
+</head>
+<body>
+  {% include 'partials/header.html' %}
+
+  <main class="container profile-update-main">
+    <div class="page-heading">
+      {% if is_provider %}
+        <a href="{% url 'provider_dashboard' %}" class="btn btn-secondary back-btn" aria-label="Back to Dashboard" title="Back to Dashboard">&larr;</a>
+      {% else %}
+        <a href="{% url 'user_dashboard' %}" class="btn btn-secondary back-btn" aria-label="Back to Dashboard" title="Back to Dashboard">&larr;</a>
+      {% endif %}
+      <h1>Update Profile</h1>
+    </div>
+
+    <div class="card profile-section-card">
+      <div class="card-body">
+        <h3 class="profile-section-title">Basic Profile</h3>
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <div class="form-group">
+            {{ user_form.first_name.label_tag }}
+            {{ user_form.first_name }}
+          </div>
+          <div class="form-group">
+            {{ user_form.email.label_tag }}
+            {{ user_form.email }}
+          </div>
+          <div class="form-group">
+            {{ user_form.mobile_no.label_tag }}
+            {{ user_form.mobile_no }}
+          </div>
+          <div class="form-group">
+            {{ user_form.address.label_tag }}
+            {{ user_form.address }}
+          </div>
+
+          {% if is_provider and provider_form %}
+            <hr class="profile-divider">
+            <h3 class="profile-section-title">Provider Details</h3>
+
+            <div class="form-group">
+              {{ provider_form.phone.label_tag }}
+              {{ provider_form.phone }}
+            </div>
+            <div class="form-group">
+              {{ provider_form.address.label_tag }}
+              {{ provider_form.address }}
+            </div>
+            <div class="form-group">
+              {{ provider_form.experience.label_tag }}
+              {{ provider_form.experience }}
+            </div>
+            <div class="form-group">
+              {{ provider_form.bio.label_tag }}
+              {{ provider_form.bio }}
+            </div>
+            <div class="form-group">
+              {{ provider_form.profile_image.label_tag }}
+              {{ provider_form.profile_image }}
+              {% if provider_form.instance and provider_form.instance.profile_image %}
+                <div class="profile-image-wrap">
+                  <img src="{{ provider_form.instance.profile_image.url }}" alt="Provider photo" class="profile-image-thumb">
+                </div>
+              {% endif %}
+            </div>
+            <div class="form-group">
+              {{ provider_form.certificate.label_tag }}
+              {{ provider_form.certificate }}
+            </div>
+            <div class="form-group">
+              {{ provider_form.aadhaar_card.label_tag }}
+              {{ provider_form.aadhaar_card }}
+            </div>
+          {% endif %}
+
+          <button type="submit" name="save_profile" class="btn btn-primary">Save Profile</button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  {% include 'partials/footer.html' %}
+</body>
+</html>
+
+

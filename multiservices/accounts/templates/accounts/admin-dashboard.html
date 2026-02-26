@@ -1,0 +1,351 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Service Provider Platform</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=20260225-4">
+</head>
+<body class="dashboard-page admin-dashboard-page" id="admin-dashboard-page">
+  <div class="admin-shell">
+    <aside class="admin-sidebar">
+      <div class="admin-brand">ServiceHub</div>
+      <nav class="admin-nav">
+        <a href="{% url 'admin_dashboard' %}" class="active">Dashboard</a>
+        <a href="#providers-table">Providers</a>
+        <a href="#services-table">Services</a>
+      </nav>
+      <div class="admin-sidebar-actions">
+        <a href="{% url 'logout' %}" class="btn btn-danger btn-sm">Logout</a>
+      </div>
+    </aside>
+
+    <main class="admin-main">
+      <header class="admin-topbar">
+        <div>
+          <h1>Dashboard</h1>
+          <p>Welcome back. Here is your platform overview.</p>
+        </div>
+        <div class="admin-topbar-right">
+          <a href="{% url 'home' %}" class="btn btn-secondary btn-sm">Home</a>
+          <div class="admin-avatar">AD</div>
+        </div>
+      </header>
+
+      {% if request.GET.removed == '1' %}
+        <div class="toast toast-success toast-visible toast-inline">
+          Provider removed successfully.
+          <button type="button" class="toast-close" aria-label="Close">&times;</button>
+        </div>
+      {% endif %}
+      {% if request.GET.approved == '1' %}
+        <div class="toast toast-success toast-visible toast-inline">
+          Provider approved successfully.
+          <button type="button" class="toast-close" aria-label="Close">&times;</button>
+        </div>
+      {% endif %}
+
+      <section class="admin-stats">
+        <div class="admin-stat-card">
+          <div class="metric">&#8377;{{ total_revenue }}</div>
+          <div class="metric-label">Total Revenue</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="metric">{{ total_services }}</div>
+          <div class="metric-label">Total Services</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="metric">{{ total_providers }}</div>
+          <div class="metric-label">Total Providers</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="metric">{{ total_bookings }}</div>
+          <div class="metric-label">Total Bookings</div>
+        </div>
+      </section>
+
+      <section class="admin-analytics-row">
+        <article class="admin-panel admin-sales-panel">
+          <div class="admin-panel-head">
+            <h2>Sales Overview</h2>
+            <span class="chip">Top Services</span>
+          </div>
+          <div class="bar-plot">
+            {% for service in chart_services %}
+              <div class="bar-col">
+                <div class="bar-fill" data-height="{{ service.chart_height|default:100 }}" title="{{ service.booking_count }} bookings"></div>
+                <div class="bar-label">{{ service.name|truncatechars:9 }}</div>
+              </div>
+            {% empty %}
+              <p class="text-muted">No booking data available yet.</p>
+            {% endfor %}
+          </div>
+        </article>
+
+        <article class="admin-panel admin-target-panel">
+          <h2>Monthly Target</h2>
+          <div class="target-ring" data-progress="{{ target_progress }}">
+            <div class="target-ring-inner">{{ target_progress }}%</div>
+          </div>
+          <p class="target-value">&#8377;{{ total_revenue }} / &#8377;{{ monthly_target }}</p>
+          <p class="target-note">
+            &#8377;{{ target_remaining }} remaining to reach target
+          </p>
+        </article>
+      </section>
+
+      <section class="admin-top-lists">
+        <article class="admin-panel">
+          <h2 class="dashboard-section-title">Top Services</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Provider</th>
+                  <th>Bookings</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for service in top_services %}
+                  <tr>
+                    <td>{{ service.name }}</td>
+                    <td>{{ service.provider.first_name|default:service.provider.username }}</td>
+                    <td>{{ service.booking_count }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="3" class="text-muted">No services found.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="admin-panel">
+          <h2 class="dashboard-section-title">Latest Bookings</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>User</th>
+                  <th>Provider</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for booking in latest_bookings %}
+                  <tr>
+                    <td>#{{ booking.id }}</td>
+                    <td>{{ booking.user.first_name|default:booking.user.username }}</td>
+                    <td>{{ booking.provider.first_name|default:booking.provider.username }}</td>
+                    <td>{{ booking.status|title }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="4" class="text-muted">No bookings found.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section class="admin-panel">
+        <h2 class="dashboard-section-title" id="providers-table">Providers overview</h2>
+        <div class="table-wrap dashboard-table-gap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Provider</th>
+                <th>Contact</th>
+                <th>Services</th>
+                <th>Bookings</th>
+                <th>Completed</th>
+                <th>Revenue</th>
+                <th>Rating</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for provider in providers %}
+                <tr>
+                  <td>{{ provider.id }}</td>
+                  <td>{{ provider.first_name|default:provider.username }}</td>
+                  <td>
+                    {{ provider.email|default:'-' }}<br>
+                    {{ provider.mobile_no|default:provider.profile.phone|default:'-' }}
+                  </td>
+                  <td>{{ provider.service_count }}</td>
+                  <td>{{ provider.booking_count }}</td>
+                  <td>{{ provider.completed_booking_count }}</td>
+                  <td>&#8377;{{ provider.revenue|default:0 }}</td>
+                  <td>
+                    {% if provider.avg_rating %}
+                      {{ provider.avg_rating|floatformat:1 }}
+                    {% else %}
+                      No
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if not provider.is_active %}
+                      <span class="badge badge-inactive">Removed</span>
+                    {% elif provider.provider_status == 'pending' %}
+                      <span class="badge badge-pending">Pending</span>
+                    {% elif provider.provider_status == 'approved' %}
+                      <span class="badge badge-live">Active</span>
+                    {% else %}
+                      <span class="badge badge-inactive">Rejected</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if not provider.is_active %}
+                      <a href="{% url 'admin_provider_detail' provider.id %}" class="admin-open-link">Open</a>
+                    {% elif provider.provider_status == 'pending' %}
+                      <a href="{% url 'admin_provider_detail' provider.id %}" class="admin-open-link">Open</a>
+                    {% elif provider.provider_status == 'approved' %}
+                      <a href="{% url 'admin_provider_detail' provider.id %}" class="admin-open-link">Open</a> |
+                      <form method="post" action="{% url 'admin_remove_provider' provider.id %}" class="admin-inline-form" onsubmit="return confirm('Remove this provider account?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                      </form>
+                    {% else %}
+                      <a href="{% url 'admin_provider_detail' provider.id %}" class="admin-open-link">Open</a>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="10" class="text-muted">No providers found.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-panel">
+        <h2 class="dashboard-section-title" id="services-table">Services tracking</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Provider</th>
+                <th>Price</th>
+                <th>Total bookings</th>
+                <th>Completed</th>
+                <th>Revenue</th>
+                <th>Rating</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for service in services %}
+                <tr>
+                  <td>{{ service.name }}</td>
+                  <td>{{ service.provider.first_name|default:service.provider.username }}</td>
+                  <td>&#8377;{{ service.price }}</td>
+                  <td>{{ service.booking_count }}</td>
+                  <td>{{ service.completed_count }}</td>
+                  <td>&#8377;{{ service.total_revenue|default:0 }}</td>
+                  <td>
+                    {% if service.avg_rating %}
+                      {{ service.avg_rating|floatformat:1 }}
+                    {% else %}
+                      No
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="7" class="text-muted">No services found.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-panel">
+        <h2 class="dashboard-section-title">Provider Reports</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Report ID</th>
+                <th>Booking</th>
+                <th>Provider</th>
+                <th>Reported By</th>
+                <th>Reason</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for report in recent_reports %}
+                <tr>
+                  <td>{{ report.id }}</td>
+                  <td>#{{ report.booking.id }}</td>
+                  <td>{{ report.provider.first_name|default:report.provider.username }}</td>
+                  <td>{{ report.user.first_name|default:report.user.username }}</td>
+                  <td>{{ report.reason }}</td>
+                  <td>{{ report.created_at|date:"d M Y h:i A" }}</td>
+                  <td>
+                    {% if report.is_reviewed %}
+                      <span class="badge badge-live">Reviewed</span>
+                    {% else %}
+                      <span class="badge badge-inactive">New</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <a href="{% url 'admin_report_detail' report.id %}">Open</a>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="8" class="text-muted">No reports submitted yet.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script>
+    (function () {
+      document.querySelectorAll('.bar-fill[data-height]').forEach(function (el) {
+        var h = parseInt(el.getAttribute('data-height') || '0', 10);
+        if (isNaN(h) || h < 0) h = 0;
+        if (h > 100) h = 100;
+        el.style.height = '100%';
+        setTimeout(function () {
+          el.style.height = h + '%';
+        }, 120);
+      });
+
+      document.querySelectorAll('.target-ring[data-progress]').forEach(function (el) {
+        var p = parseInt(el.getAttribute('data-progress') || '0', 10);
+        if (isNaN(p) || p < 0) p = 0;
+        if (p > 100) p = 100;
+        el.style.setProperty('--progress', p + '%');
+      });
+
+      document.addEventListener('click', function (event) {
+        if (!event.target.classList.contains('toast-close')) return;
+        var toast = event.target.closest('.toast');
+        if (!toast) return;
+        toast.classList.remove('toast-visible');
+        setTimeout(function () { toast.remove(); }, 200);
+      });
+    })();
+  </script>
+</body>
+</html>

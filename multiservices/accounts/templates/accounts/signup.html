@@ -1,0 +1,220 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up - Service Provider Platform</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=20260224-6">
+</head>
+<body>
+  {% include 'partials/header.html' %}
+
+  <div id="toast-container"></div>
+
+  <main class="auth-page">
+    <div class="card auth-card auth-card-wide">
+      <div class="card-body">
+        <h1>Sign Up</h1>
+        <p class="subtitle">Create your account as User or Service Provider.</p>
+
+        <form method="POST" action="{% url 'signup' %}" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+            <div class="error-text">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          <div class="form-group">
+            {{ form.first_name.label_tag }}
+            {{ form.first_name }}
+            {% if form.first_name.errors %}<div class="error-text">{{ form.first_name.errors|striptags }}</div>{% endif %}
+          </div>
+
+          <div class="form-group">
+            {{ form.username.label_tag }}
+            {{ form.username }}
+            {% if form.username.errors %}<div class="error-text">{{ form.username.errors|striptags }}</div>{% endif %}
+          </div>
+
+          <div class="form-group">
+            {{ form.email.label_tag }}
+            {{ form.email }}
+            {% if form.email.errors %}<div class="error-text">{{ form.email.errors|striptags }}</div>{% endif %}
+          </div>
+
+          <div class="form-group">
+            {{ form.mobile_no.label_tag }}
+            {{ form.mobile_no }}
+            {% if form.mobile_no.errors %}<div class="error-text">{{ form.mobile_no.errors|striptags }}</div>{% endif %}
+          </div>
+
+          <div class="form-group">
+            {{ form.address.label_tag }}
+            {{ form.address }}
+            {% if form.address.errors %}<div class="error-text">{{ form.address.errors|striptags }}</div>{% endif %}
+          </div>
+
+          <div class="form-group">
+            <label>Register As</label>
+            {{ form.role }}
+            {% if form.role.errors %}<div class="error-text">{{ form.role.errors|striptags }}</div>{% endif %}
+          </div>
+
+          <div id="provider-extra" class="hidden">
+
+            <div class="form-group">
+              <label>Experience (Years)</label>
+              <input type="number" name="experience" class="form-control" placeholder="e.g. 5">
+            </div>
+
+            <div class="form-group">
+              <label>Service Category</label>
+              <select name="category" id="provider-category" class="form-control">
+                <option value="">Select a service</option>
+                <option value="Plumber">Plumber</option>
+                <option value="Tutor">Tutor</option>
+                <option value="Cleaning">Cleaning</option>
+                <option value="AC Repair">AC Repair</option>
+                <option value="Carpenter">Carpenter</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div class="form-group hidden" id="provider-category-other">
+              <label>Other Service</label>
+              <input type="text" name="category_other" class="form-control" placeholder="Enter service name">
+            </div>
+
+            <div class="form-group">
+              <label>Service Time (Availability)</label>
+              <input type="text" name="service_time" class="form-control" placeholder="e.g. 09:00 AM - 06:00 PM">
+            </div>
+
+            <div class="form-group">
+              <label>Service Price (&#8377;)</label>
+              <input type="number" name="service_price" class="form-control" min="0" step="0.01" placeholder="e.g. 500">
+            </div>
+
+            <div class="form-group">
+              <label>Provider Profile Image</label>
+              <input type="file" name="provider_image" class="form-control provider-required" accept=".jpg,.jpeg,.png,.webp">
+            </div>
+
+            <div class="form-group">
+              <label>Upload Certificate</label>
+              <input type="file" name="certificate" class="form-control provider-required" accept=".pdf,.jpg,.jpeg,.png,.webp">
+            </div>
+
+            <div class="form-group">
+              <label>Upload Aadhaar Card</label>
+              <input type="file" name="aadhaar_card" class="form-control provider-required" accept=".pdf,.jpg,.jpeg,.png,.webp">
+            </div>
+          </div>
+
+          <div class="form-group">
+            {{ form.password1.label_tag }}
+            {{ form.password1 }}
+            <label class="password-toggle-label">
+              <input type="checkbox" id="toggle-signup-password1">
+              Show password
+            </label>
+            {% if form.password1.errors %}<div class="error-text">{{ form.password1.errors|striptags }}</div>{% endif %}
+          </div>
+
+          <div class="form-group">
+            {{ form.password2.label_tag }}
+            {{ form.password2 }}
+            <label class="password-toggle-label">
+              <input type="checkbox" id="toggle-signup-password2">
+              Show password
+            </label>
+            {% if form.password2.errors %}<div class="error-text">{{ form.password2.errors|striptags }}</div>{% endif %}
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block">Create account</button>
+        </form>
+
+        <p class="auth-footer-text">
+          Already have an account? <a href="{% url 'signin' %}">Sign In</a>
+        </p>
+      </div>
+    </div>
+  </main>
+
+  {% include 'partials/footer.html' %}
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      var radios = document.querySelectorAll("input[name='role']");
+      var providerExtra = document.getElementById("provider-extra");
+      var providerRequiredFields = document.querySelectorAll(".provider-required");
+      var providerCategory = document.getElementById("provider-category");
+      var providerCategoryOther = document.getElementById("provider-category-other");
+
+      function syncProviderFields() {
+        var selected = document.querySelector("input[name='role']:checked");
+        if (selected && selected.value === "provider") {
+          providerExtra.classList.remove("hidden");
+          providerRequiredFields.forEach(function (field) { field.required = true; });
+        } else {
+          providerExtra.classList.add("hidden");
+          providerRequiredFields.forEach(function (field) { field.required = false; });
+        }
+      }
+
+      function syncCategoryOther() {
+        if (!providerCategory || !providerCategoryOther) return;
+        var isOther = providerCategory.value === "Other";
+        providerCategoryOther.classList.toggle("hidden", !isOther);
+        var otherInput = providerCategoryOther.querySelector("input");
+        if (otherInput) {
+          otherInput.required = isOther;
+        }
+      }
+
+      radios.forEach(function (radio) {
+        radio.addEventListener("change", syncProviderFields);
+      });
+      if (providerCategory) {
+        providerCategory.addEventListener("change", syncCategoryOther);
+      }
+
+      var password1 = document.getElementById("id_password1");
+      var password2 = document.getElementById("id_password2");
+      var togglePassword1 = document.getElementById("toggle-signup-password1");
+      var togglePassword2 = document.getElementById("toggle-signup-password2");
+
+      if (password1 && togglePassword1) {
+        togglePassword1.addEventListener("change", function () {
+          password1.type = togglePassword1.checked ? "text" : "password";
+        });
+      }
+      if (password2 && togglePassword2) {
+        togglePassword2.addEventListener("change", function () {
+          password2.type = togglePassword2.checked ? "text" : "password";
+        });
+      }
+
+      syncProviderFields();
+      syncCategoryOther();
+
+      var hasEmailError = '{{ form.email.errors|yesno:"1,0" }}' === '1';
+      if (hasEmailError) {
+        var container = document.getElementById('toast-container');
+        if (container) {
+          var toast = document.createElement('div');
+          toast.className = 'toast toast-error toast-visible';
+          toast.innerHTML = 'Please enter valid email.<button type="button" class="toast-close" aria-label="Close">×</button>';
+          container.appendChild(toast);
+          setTimeout(function () {
+            toast.classList.remove('toast-visible');
+            setTimeout(function () { toast.remove(); }, 300);
+          }, 3000);
+        }
+      }
+    });
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,297 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Provider Dashboard - Service Provider Platform</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=20260225-2">
+</head>
+<body class="dashboard-page" id="provider-dashboard-page">
+  {% include 'partials/header.html' %}
+
+  <div id="toast-container"></div>
+
+  <main class="container">
+    <div class="page-heading">
+      <a href="{% url 'home' %}" class="btn btn-secondary back-btn" aria-label="Back to Home" title="Back to Home">&larr;</a>
+      <h1>Provider dashboard</h1>
+    </div>
+    {% if request.GET.updated == '1' %}
+      <div class="toast toast-success toast-visible toast-auto toast-inline">
+        Profile updated successfully.
+        <button type="button" class="toast-close" aria-label="Close">×</button>
+      </div>
+    {% endif %}
+    <p class="dashboard-intro">
+      Welcome, {{ request.user.first_name|default:request.user.username }}. Manage requests, track jobs, and view history.
+    </p>
+    {% if not provider_is_approved %}
+      <div class="toast toast-error toast-visible toast-inline">
+        Your account is currently not active. Wait until your status gets active by admin verification.
+      </div>
+    {% endif %}
+
+    <div class="dashboard-top">
+      <div class="card profile-card">
+        <div class="card-body">
+          <div class="profile-row">
+            <div class="profile-avatar-wrap">
+              {% if profile.profile_image %}
+                <img src="{{ profile.profile_image.url }}" alt="Provider photo" class="profile-avatar">
+              {% else %}
+                <div class="profile-avatar profile-avatar-fallback">
+                  {{ request.user.first_name|default:request.user.username|slice:":1"|upper }}
+                </div>
+              {% endif %}
+            </div>
+            <div class="profile-info">
+              <h3>{{ request.user.first_name|default:request.user.username }}</h3>
+              <p class="muted">@{{ request.user.username }} | {{ request.user.email }}</p>
+              <p class="muted">{{ profile.phone|default:request.user.mobile_no|default:"-" }}</p>
+              <p class="muted">{{ profile.address|default:request.user.address|default:"-" }}</p>
+            </div>
+          </div>
+          <div class="profile-services">
+            <p class="muted profile-services-title">Services offered</p>
+            <div class="service-chips">
+              {% for s in provider_services %}
+                <span class="service-chip">{{ s.name }}</span>
+              {% empty %}
+                <span class="muted">No services added yet.</span>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="profile-actions">
+            <a href="{% url 'profile_update' %}" class="btn btn-secondary">Update Profile</a>
+            <a href="{% url 'provider_services' %}" class="btn btn-primary">Manage My Services</a>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="dash-grid">
+          <div class="stat-card">
+            <div class="value">{{ total_bookings }}</div>
+            <div class="label">Total bookings</div>
+          </div>
+          <div class="stat-card">
+            <div class="value">{{ pending_bookings|length }}</div>
+            <div class="label">Pending requests</div>
+          </div>
+          <div class="stat-card">
+            <div class="value">{{ active_bookings|length }}</div>
+            <div class="label">Active bookings</div>
+          </div>
+          <div class="stat-card">
+            <div class="value">&#8377;{{ provider_earnings }}</div>
+            <div class="label">Earnings</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="dashboard-section-title">Requests (pending + active)</h2>
+    <div class="table-wrap dashboard-table-gap">
+      <table>
+        <thead>
+          <tr>
+            <th>Booking ID</th>
+            <th>Service</th>
+            <th>User</th>
+            <th>Date & time</th>
+            <th>Status</th>
+            <th>User Location</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if pending_bookings or active_bookings %}
+            {% for booking in pending_bookings %}
+            <tr>
+              <td>{{ booking.id }}</td>
+              <td>{{ booking.service_name }}</td>
+              <td>{{ booking.user.first_name|default:booking.user.username }}</td>
+              <td>{{ booking.date|date:"d M Y h:i A" }}</td>
+              <td><span class="badge badge-{{ booking.status }}">{{ booking.status|title }}</span></td>
+              <td>
+                {% if booking.provider_marked_done or booking.status == 'completed' %}
+                  Hidden after completion
+                {% elif booking.latitude and booking.longitude %}
+                  <a href="https://maps.google.com/?q={{ booking.latitude }},{{ booking.longitude }}" target="_blank" rel="noopener">Live</a>
+                {% elif booking.service_address %}
+                  {{ booking.service_address }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td>
+                <a href="{% url 'accept_booking' booking.id %}">Accept</a> |
+                <a href="{% url 'reject_booking' booking.id %}">Reject</a>
+              </td>
+            </tr>
+            {% endfor %}
+            {% for booking in active_bookings %}
+            <tr>
+              <td>{{ booking.id }}</td>
+              <td>{{ booking.service_name }}</td>
+              <td>{{ booking.user.first_name|default:booking.user.username }}</td>
+              <td>{{ booking.date|date:"d M Y h:i A" }}</td>
+              <td><span class="badge badge-{{ booking.status }}">{{ booking.status|title }}</span></td>
+              <td>
+                {% if booking.provider_marked_done or booking.status == 'completed' %}
+                  Hidden after completion
+                {% elif booking.latitude and booking.longitude %}
+                  <a href="https://maps.google.com/?q={{ booking.latitude }},{{ booking.longitude }}" target="_blank" rel="noopener">Live</a>
+                {% elif booking.service_address %}
+                  {{ booking.service_address }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td>
+                <a href="{% url 'booking_status' booking.id %}">Open</a> |
+                <a href="{% url 'reject_booking' booking.id %}">Reject</a>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="7" class="text-muted">No requests yet.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="history-toolbar">
+      <h2 class="history-toolbar-title">Service history summary</h2>
+      <form method="get" class="history-toolbar-form">
+        <label for="history_range" class="history-toolbar-label">Range:</label>
+        <select id="history_range" name="history_range" class="form-control max-w-170">
+          <option value="all" {% if history_range == 'all' %}selected{% endif %}>All</option>
+          <option value="today" {% if history_range == 'today' %}selected{% endif %}>Today</option>
+          <option value="week" {% if history_range == 'week' %}selected{% endif %}>Last 7 Days</option>
+          <option value="month" {% if history_range == 'month' %}selected{% endif %}>Last 30 Days</option>
+        </select>
+        <button type="submit" class="btn btn-secondary">Apply</button>
+      </form>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Booking ID</th>
+            <th>Service</th>
+            <th>User</th>
+            <th>Date & time</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Payment</th>
+            <th>Feedback</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for booking in history_bookings %}
+            <tr>
+              <td>{{ booking.id }}</td>
+              <td>{{ booking.service_name }}</td>
+              <td>{{ booking.user.first_name|default:booking.user.username }}</td>
+              <td>{{ booking.date|date:"d M Y h:i A" }}</td>
+              <td>&#8377;{{ booking.amount }}</td>
+              <td><span class="badge badge-{{ booking.status }}">{{ booking.status|title }}</span></td>
+              <td>
+                {% if booking.payment_status == 'paid' %}
+                  {{ booking.payment_mode|default:'-' }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td>
+                {% if booking.feedback_rating %}
+                  <span class="star-display" aria-label="{{ booking.feedback_rating }} out of 5">
+                    <span>{% if booking.feedback_rating >= 1 %}&#9733;{% else %}&#9734;{% endif %}</span>
+                    <span>{% if booking.feedback_rating >= 2 %}&#9733;{% else %}&#9734;{% endif %}</span>
+                    <span>{% if booking.feedback_rating >= 3 %}&#9733;{% else %}&#9734;{% endif %}</span>
+                    <span>{% if booking.feedback_rating >= 4 %}&#9733;{% else %}&#9734;{% endif %}</span>
+                    <span>{% if booking.feedback_rating >= 5 %}&#9733;{% else %}&#9734;{% endif %}</span>
+                  </span>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="8" class="text-muted">No history yet.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  {% include 'partials/footer.html' %}
+
+  <script>
+    (function () {
+      var latestNotificationId = parseInt('{{ latest_notification_id|default:0 }}', 10) || 0;
+      var reloadScheduled = false;
+
+      function bindToastAutoClose(toast) {
+        setTimeout(function () {
+          toast.classList.remove('toast-visible');
+          setTimeout(function () { toast.remove(); }, 300);
+        }, 10000);
+      }
+
+      function showToast(message, type) {
+        var container = document.getElementById('toast-container');
+        if (!container) return;
+        var toast = document.createElement('div');
+        toast.className = 'toast toast-visible toast-auto toast-' + (type || 'success');
+        toast.innerHTML = message + '<button type="button" class="toast-close" aria-label="Close">×</button>';
+        container.appendChild(toast);
+        bindToastAutoClose(toast);
+      }
+
+      function pollNotifications() {
+        fetch('{% url "notifications_poll" %}?since_id=' + latestNotificationId, { credentials: 'same-origin' })
+          .then(function (resp) { return resp.ok ? resp.json() : null; })
+          .then(function (data) {
+            if (!data || !data.ok) return;
+            var hasUpdates = false;
+            if (Array.isArray(data.notifications)) {
+              data.notifications.forEach(function (note) {
+                hasUpdates = true;
+                showToast(note.message, 'success');
+              });
+            }
+            if (data.latest_id) latestNotificationId = data.latest_id;
+            if (hasUpdates && !reloadScheduled) {
+              reloadScheduled = true;
+              setTimeout(function () { window.location.reload(); }, 1800);
+            }
+          })
+          .catch(function () {});
+      }
+
+      var toasts = document.querySelectorAll('.toast-auto');
+      toasts.forEach(function (toast) {
+        bindToastAutoClose(toast);
+      });
+      document.addEventListener('click', function (event) {
+        if (!event.target.classList.contains('toast-close')) return;
+        var toast = event.target.closest('.toast');
+        if (toast) {
+          toast.classList.remove('toast-visible');
+          setTimeout(function () { toast.remove(); }, 300);
+        }
+      });
+
+      setInterval(pollNotifications, 6000);
+    })();
+  </script>
+</body>
+</html>

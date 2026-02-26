@@ -1,0 +1,81 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Services</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=20260224-6">
+</head>
+<body>
+  {% include 'partials/header.html' %}
+
+  <main class="container">
+    <div class="page-heading">
+      <a href="{% url 'provider_dashboard' %}" class="btn btn-secondary back-btn" aria-label="Back to Dashboard" title="Back to Dashboard">&larr;</a>
+      <h1>Manage Your Services</h1>
+    </div>
+    <p class="provider-services-intro">Add, edit, or remove the services users can book.</p>
+
+    <div class="card provider-services-form-card">
+      <div class="card-body">
+        <h3 class="provider-services-form-title">{% if editing_service %}Edit Service{% else %}Add New Service{% endif %}</h3>
+
+        <form method="post" enctype="multipart/form-data" action="{% if editing_service %}{% url 'edit_provider_service' editing_service.id %}{% else %}{% url 'provider_services' %}{% endif %}">
+          {% csrf_token %}
+
+          <div class="form-group">
+            {{ form.name.label_tag }}
+            {{ form.name }}
+          </div>
+
+          <div class="form-group">
+            {{ form.description.label_tag }}
+            {{ form.description }}
+          </div>
+
+          <div class="form-group">
+            {{ form.price.label_tag }}
+            {{ form.price }}
+          </div>
+
+          <div class="form-group">
+            {{ form.image.label_tag }}
+            {{ form.image }}
+          </div>
+
+          <div class="row-actions">
+            <button type="submit" class="btn btn-primary">{% if editing_service %}Update Service{% else %}Add Service{% endif %}</button>
+            {% if editing_service %}
+              <a href="{% url 'provider_services' %}" class="btn btn-secondary">Cancel</a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <h2 class="provider-services-list-title">Your Current Services</h2>
+    {% for s in services %}
+      <div class="card provider-services-item-card">
+        <div class="card-body">
+          {% if s.image %}
+            <img src="{{ s.image.url }}" alt="{{ s.name }}" class="provider-service-image">
+          {% endif %}
+          <p><strong>{{ s.name }}</strong></p>
+          <p class="provider-service-description">{{ s.description }}</p>
+          <p><strong>Price:</strong> &#8377;{{ s.price }}</p>
+          <div class="provider-service-actions">
+            <a href="{% url 'edit_provider_service' s.id %}" class="btn btn-primary">Edit</a>
+            <a href="{% url 'delete_provider_service' s.id %}" class="btn btn-secondary" onclick="return confirm('Delete this service?');">Delete</a>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-muted">No services added yet.</p>
+    {% endfor %}
+  </main>
+
+  {% include 'partials/footer.html' %}
+</body>
+</html>
+

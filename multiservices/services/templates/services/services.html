@@ -1,0 +1,116 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Service Listing - Service Provider Platform</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=20260224-6">
+</head>
+<body>
+  {% include 'partials/header.html' %}
+
+  <div id="toast-container"></div>
+
+  <main class="container">
+    <div class="page-heading">
+      <a href="{% url 'home' %}" class="btn btn-secondary back-btn" aria-label="Back to Home" title="Back to Home">&larr;</a>
+      <h1>Service providers</h1>
+    </div>
+    <p class="results-hint-text" id="results-hint">
+      {% if selected_category %}
+        Showing providers for "{{ selected_category }}".
+      {% elif query %}
+        Showing results for "{{ query }}".
+      {% else %}
+        Browse all providers or use filters below.
+      {% endif %}
+    </p>
+
+    <form method="GET" class="filters-bar">
+      <div class="filters-row">
+        <div class="filter-item">
+          <label for="category">Category:</label>
+          <select name="category" id="category" class="form-control">
+            <option value="">All</option>
+            {% for cat in categories %}
+              <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label for="min_rating">Min rating:</label>
+          <select name="min_rating" id="min_rating" class="form-control">
+            <option value="" {% if not selected_min_rating %}selected{% endif %}>Any</option>
+            <option value="3.5" {% if selected_min_rating == '3.5' %}selected{% endif %}>3.5+</option>
+            <option value="4" {% if selected_min_rating == '4' %}selected{% endif %}>4+</option>
+            <option value="4.5" {% if selected_min_rating == '4.5' %}selected{% endif %}>4.5+</option>
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label for="max_price">Max price (&#8377;):</label>
+          <select name="max_price" id="max_price" class="form-control">
+            <option value="" {% if not selected_max_price %}selected{% endif %}>Any</option>
+            <option value="400" {% if selected_max_price == '400' %}selected{% endif %}>&#8377;400</option>
+            <option value="500" {% if selected_max_price == '500' %}selected{% endif %}>&#8377;500</option>
+            <option value="700" {% if selected_max_price == '700' %}selected{% endif %}>&#8377;700</option>
+            <option value="1000" {% if selected_max_price == '1000' %}selected{% endif %}>&#8377;1000</option>
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label for="sort">Sort by:</label>
+          <select name="sort" id="sort" class="form-control">
+            <option value="" {% if not selected_sort %}selected{% endif %}>Newest</option>
+            <option value="price_low" {% if selected_sort == 'price_low' %}selected{% endif %}>Price low to high</option>
+            <option value="price_high" {% if selected_sort == 'price_high' %}selected{% endif %}>Price high to low</option>
+            <option value="rating_high" {% if selected_sort == 'rating_high' %}selected{% endif %}>Highest rating</option>
+          </select>
+        </div>
+      </div>
+
+      {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+
+      <div class="filters-actions">
+        <button type="submit" class="btn btn-primary">Apply</button>
+      </div>
+    </form>
+
+    <div class="provider-grid" id="provider-grid">
+      {% for service in services %}
+        <a href="{% url 'service_detail' service.id %}" class="provider-card">
+          {% if service.provider_image_url %}
+            <div class="card-img">
+              <img src="{{ service.provider_image_url }}" alt="{{ service.provider.first_name|default:service.provider.username }}" class="provider-card-photo">
+            </div>
+          {% elif service.image %}
+            <div class="card-img">
+              <img src="{{ service.image.url }}" alt="{{ service.provider.first_name|default:service.provider.username }}" class="provider-card-photo">
+            </div>
+          {% else %}
+            <div class="card-img">{{ service.category_icon|default:"???" }}</div>
+          {% endif %}
+          <div class="card-body">
+            <h3>{{ service.provider.first_name|default:service.provider.username }}</h3>
+            <div class="meta">
+              <span class="rating-badge">&#9733; {{ service.avg_rating|default:'3.0' }}</span>
+              <span>&#8377;{{ service.price }}</span>
+              <span class="avail-badge">Available</span>
+            </div>
+            <p class="service-display-name">{{ service.display_name|default:service.name }}</p>
+          </div>
+        </a>
+      {% empty %}
+        <p class="provider-card-empty">No providers match your filters yet. Try another category or clear filters.</p>
+      {% endfor %}
+    </div>
+  </main>
+
+  {% include 'partials/footer.html' %}
+</body>
+</html>
+
+
+

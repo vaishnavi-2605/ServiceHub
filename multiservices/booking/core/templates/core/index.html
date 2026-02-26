@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Service Provider Platform - Home</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=20260224-6">
+</head>
+<body>
+  {% include 'partials/header.html' %}
+
+  <div id="toast-container"></div>
+
+  <main class="container">
+    <section class="hero-search">
+      <h1>Find the right service provider</h1>
+      <p>Search for Plumber, Tutor, Cleaning, and more. Book and track in one place.</p>
+      <form class="search-box-wrap" id="search-form" action="{% url 'service' %}" method="GET">
+        <input type="text" name="q" class="search-input" id="search-input" placeholder="e.g. Plumber, Tutor, Cleaning" required autocomplete="off">
+        <button type="submit" class="btn btn-primary">Search</button>
+      </form>
+    </section>
+
+    <section class="home-services">
+      <h2>Our services</h2>
+      <p class="subtitle">Choose a category to browse trusted providers</p>
+      <div class="services-grid" id="services-grid">
+        {% for item in home_categories %}
+          <a href="{% url 'service' %}?category={{ item.name|urlencode }}" class="service-icon-card">
+            <div class="icon-wrap">
+              {% if item.image_url %}
+                <img src="{{ item.image_url }}" alt="{{ item.name }} logo">
+              {% else %}
+                <span>{{ item.icon }}</span>
+              {% endif %}
+            </div>
+            <span class="label">{{ item.name }}</span>
+            <span class="hint">View providers</span>
+          </a>
+        {% endfor %}
+      </div>
+    </section>
+  </main>
+
+  {% include 'partials/footer.html' %}
+</body>
+</html>
+
