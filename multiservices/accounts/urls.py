@@ -12,6 +12,7 @@ urlpatterns = [
     path('admin_dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('admin_dashboard/provider/<int:provider_id>/approve/', views.admin_approve_provider, name='admin_approve_provider'),
     path('admin_dashboard/provider/<int:provider_id>/remove/', views.admin_remove_provider, name='admin_remove_provider'),
+    path('admin_dashboard/contact-message/<int:message_id>/delete/', views.admin_delete_contact_message, name='admin_delete_contact_message'),
     path('admin_dashboard/provider/<int:provider_id>/', views.admin_provider_detail, name='admin_provider_detail'),
     path('admin_dashboard/report/<int:report_id>/', views.admin_report_detail, name='admin_report_detail'),
     path('provider_dashboard/booking/<int:booking_id>/accept/', booking_views.accept_booking, name='accept_booking'),

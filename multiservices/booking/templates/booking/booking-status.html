@@ -43,6 +43,7 @@
 
     <div class="card booking-card-gap">
       <div class="card-body">
+        <p><strong>Service:</strong> {{ booking.service_name }}{% if booking.service and booking.service.subcategory %} - {{ booking.service.subcategory }}{% endif %}</p>
         <p><strong>Service Address:</strong> {{ booking.service_address|default:'Not provided' }}</p>
         <p><strong>User Live Location:</strong> {% if booking.use_live_location %}Enabled{% else %}Not enabled{% endif %}</p>
         <p id="live-location-line">

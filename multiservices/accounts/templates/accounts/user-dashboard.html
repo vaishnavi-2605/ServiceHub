@@ -57,11 +57,47 @@
             <div class="label">Total bookings</div>
           </div>
           <div class="stat-card">
+            <div class="value">{{ active_bookings }}</div>
+            <div class="label">Ongoing</div>
+          </div>
+          <div class="stat-card">
             <div class="value">{{ completed_bookings }}</div>
             <div class="label">Completed</div>
           </div>
         </div>
       </div>
+    </div>
+
+    <h2 class="dashboard-section-title">Ongoing Services</h2>
+    <div class="table-wrap dashboard-table-gap">
+      <table>
+        <thead>
+          <tr>
+            <th>Booking ID</th>
+            <th>Service</th>
+            <th>Provider</th>
+            <th>Date & time</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for booking in active_booking_list %}
+            <tr>
+              <td>{{ booking.id }}</td>
+              <td>{{ booking.service_name }}{% if booking.service and booking.service.subcategory %} - {{ booking.service.subcategory }}{% endif %}</td>
+              <td>{{ booking.provider.first_name|default:booking.provider.username }}</td>
+              <td>{{ booking.date|date:"d M Y h:i A" }}</td>
+              <td><span class="badge badge-{{ booking.status }}">{{ booking.status|title }}</span></td>
+              <td><a href="{% url 'booking_status' booking.id %}">Open</a></td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="text-muted">No ongoing services right now.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
 
     <h2 class="dashboard-section-title">Completed / rejected history</h2>
@@ -81,7 +117,7 @@
           {% for booking in history_bookings %}
             <tr>
               <td>{{ booking.id }}</td>
-              <td>{{ booking.service_name }}</td>
+              <td>{{ booking.service_name }}{% if booking.service and booking.service.subcategory %} - {{ booking.service.subcategory }}{% endif %}</td>
               <td>{{ booking.provider.first_name|default:booking.provider.username }}</td>
               <td>{{ booking.date|date:"d M Y h:i A" }}</td>
               <td>&#8377;{{ booking.amount }}</td>

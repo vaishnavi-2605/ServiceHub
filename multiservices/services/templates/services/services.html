@@ -29,7 +29,7 @@
 
     <form method="GET" class="filters-bar">
       <div class="filters-row">
-        <div class="filter-item">
+        <div class="filter-item filter-item-category">
           <label for="category">Category:</label>
           <select name="category" id="category" class="form-control">
             <option value="">All</option>
@@ -69,6 +69,18 @@
             <option value="rating_high" {% if selected_sort == 'rating_high' %}selected{% endif %}>Highest rating</option>
           </select>
         </div>
+
+        <div class="filter-item filter-item-subcategory{% if selected_category %} is-active{% endif %}">
+          {% if selected_category %}
+            <label for="subcategory">Subfield:</label>
+            <select name="subcategory" id="subcategory" class="form-control">
+              <option value="">All</option>
+              {% for subcat in subcategories %}
+                <option value="{{ subcat }}" {% if selected_subcategory == subcat %}selected{% endif %}>{{ subcat }}</option>
+              {% endfor %}
+            </select>
+          {% endif %}
+        </div>
       </div>
 
       {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
@@ -100,6 +112,9 @@
               <span class="avail-badge">Available</span>
             </div>
             <p class="service-display-name">{{ service.display_name|default:service.name }}</p>
+            {% if service.subcategory %}
+              <p class="service-subcategory">{{ service.subcategory }}</p>
+            {% endif %}
           </div>
         </a>
       {% empty %}
@@ -109,6 +124,24 @@
   </main>
 
   {% include 'partials/footer.html' %}
+  <script>
+    (function () {
+      var categorySelect = document.getElementById('category');
+      if (!categorySelect) return;
+
+      categorySelect.addEventListener('change', function () {
+        var form = categorySelect.closest('form');
+        if (!form) return;
+
+        var subcategorySelect = document.getElementById('subcategory');
+        if (subcategorySelect) {
+          subcategorySelect.value = '';
+        }
+
+        form.submit();
+      });
+    })();
+  </script>
 </body>
 </html>
 

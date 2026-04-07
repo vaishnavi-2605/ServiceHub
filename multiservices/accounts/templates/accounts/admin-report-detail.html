@@ -110,7 +110,7 @@
                 <tr>
                   <td>#{{ item.id }}</td>
                   <td>{{ item.user.first_name|default:item.user.username }}</td>
-                  <td>{{ item.service_name }}</td>
+                  <td>{{ item.service_name }}{% if item.service and item.service.subcategory %} - {{ item.service.subcategory }}{% endif %}</td>
                   <td>{{ item.date|date:"d M Y h:i A" }}</td>
                   <td>{{ item.status|title }}</td>
                   <td>{{ item.payment_status|title }}</td>

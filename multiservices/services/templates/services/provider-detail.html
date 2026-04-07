@@ -26,6 +26,9 @@
           <div>
             <h1>{{ provider.first_name|default:provider.username }}</h1>
             <p class="category">{{ service.display_name|default:service.name }}</p>
+            {% if service.subcategory %}
+              <p class="provider-subcategory">{{ service.subcategory }}</p>
+            {% endif %}
             <p>
               <span class="rating-badge">&#9733; {{ avg_rating|default:'3.0' }}</span>
               &nbsp;|&nbsp; &#8377;{{ service.price }}
@@ -54,10 +57,13 @@
     </div>
 
     <div class="card">
-      <div class="card-body">
-        <h2 class="provider-book-title">Book this provider</h2>
-        <form method="post" action="{% url 'create_booking' service.id %}" class="booking-form">
-          {% csrf_token %}
+        <div class="card-body">
+          <h2 class="provider-book-title">Book this provider</h2>
+          <p class="provider-subcategory">
+            <strong>Service:</strong> {{ service.display_name|default:service.name }}{% if service.subcategory %} - {{ service.subcategory }}{% endif %}
+          </p>
+          <form method="post" action="{% url 'create_booking' service.id %}" class="booking-form">
+            {% csrf_token %}
           <div class="form-row">
             <div class="form-group">
               <label for="book-date">Date</label>

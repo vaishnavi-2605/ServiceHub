@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign In - Service Provider Platform</title>
+  <title>Login - Service Provider Platform</title>
   <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=20260224-6">
 </head>
 <body>
@@ -15,8 +15,8 @@
   <main class="auth-page">
     <div class="card auth-card">
       <div class="card-body">
-        <h1>Sign In</h1>
-        <p class="subtitle">Sign in with your username.</p>
+        <h1>Login</h1>
+        <p class="subtitle">Login with your username.</p>
 
         <form method="POST" action="{% url 'signin' %}">
           {% csrf_token %}
@@ -39,7 +39,7 @@
             </label>
           </div>
 
-          <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+          <button type="submit" class="btn btn-primary btn-block">Login</button>
         </form>
       </div>
     </div>

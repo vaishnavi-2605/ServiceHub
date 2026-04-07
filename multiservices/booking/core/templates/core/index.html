@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Service Provider Platform - Home</title>
-  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=20260224-6">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=20260328-1">
 </head>
 <body>
   {% include 'partials/header.html' %}
@@ -22,12 +22,51 @@
       </form>
     </section>
 
-    <section class="home-services">
-      <h2>Our services</h2>
-      <p class="subtitle">Choose a category to browse trusted providers</p>
+    <section class="home-about reveal-on-scroll" data-reveal>
+      <div class="home-about-header reveal-child">
+        <h2>About Us</h2>
+        <p class="home-about-lead">
+          Your trusted platform for everyday services.
+        </p>
+      </div>
+      <div class="home-about-copy reveal-child">
+        <p>
+          We connect customers with dependable local professionals for home, education,
+          maintenance, and essential daily services. Our goal is to make booking simple,
+          transparent, and reliable from search to completion.
+        </p>
+        <p>
+          Whether someone needs a quick repair, a skilled tutor, or everyday home support,
+          our platform helps them discover the right provider, book with confidence, and
+          stay informed at every stage of the service journey.
+        </p>
+      </div>
+      <div class="home-about-highlights">
+        <article class="about-highlight-card reveal-child">
+          <strong>10+</strong>
+          <p>Service Categories</p>
+        </article>
+        <article class="about-highlight-card reveal-child">
+          <strong>2K+</strong>
+          <p>Expected Users</p>
+        </article>
+        <article class="about-highlight-card reveal-child">
+          <strong>24/7</strong>
+          <p>Booking Access</p>
+        </article>
+        <article class="about-highlight-card reveal-child">
+          <strong>1+</strong>
+          <p>Trusted Platform</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="home-services reveal-on-scroll" data-reveal>
+      <h2 class="reveal-child">Our services</h2>
+      <p class="subtitle reveal-child">Choose a category to browse trusted providers</p>
       <div class="services-grid" id="services-grid">
         {% for item in home_categories %}
-          <a href="{% url 'service' %}?category={{ item.name|urlencode }}" class="service-icon-card">
+          <a href="{% url 'service' %}?category={{ item.name|urlencode }}" class="service-icon-card reveal-child">
             <div class="icon-wrap">
               {% if item.image_url %}
                 <img src="{{ item.image_url }}" alt="{{ item.name }} logo">
@@ -41,9 +80,113 @@
         {% endfor %}
       </div>
     </section>
+
+    <section class="home-contact reveal-on-scroll" data-reveal id="contact-us">
+      <div class="home-contact-heading reveal-child">
+        <h2>Contact Us</h2>
+        <p class="subtitle">
+          Send us a message and our team will get back to you with support and booking help.
+        </p>
+      </div>
+      <div class="home-contact-card reveal-child">
+        {% if contact_sent %}
+          <div class="toast toast-success toast-visible toast-inline">
+            Your message has been sent successfully.
+            <button type="button" class="toast-close" aria-label="Close">&times;</button>
+          </div>
+        {% endif %}
+        <form class="home-contact-form" action="#" method="post">
+          {% csrf_token %}
+          <div class="home-contact-grid">
+            <div class="form-group">
+              <label for="contact-name">Full name</label>
+              <input type="text" id="contact-name" name="name" class="form-control" placeholder="Enter your name" required>
+            </div>
+            <div class="form-group">
+              <label for="contact-email">Email address</label>
+              <input type="email" id="contact-email" name="email" class="form-control" placeholder="Enter your email" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="contact-subject">Subject</label>
+            <select id="contact-subject" name="subject" class="form-control" required>
+              <option value="" selected disabled>Select a subject</option>
+              <option value="booking-support">Booking Support</option>
+              <option value="provider-information">Provider Information</option>
+              <option value="technical-issue">Technical Issue</option>
+              <option value="general-inquiry">General Inquiry</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="contact-message">Message</label>
+            <textarea id="contact-message" name="message" class="form-control home-contact-message" rows="5" placeholder="Write your message here" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">Send Message</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="home-faq">
+      <div class="home-faq-heading">
+        <h2>Frequently asked questions</h2>
+      </div>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>How do I book a service?</summary>
+          <p>Search for the service you need, choose a provider, and complete the booking steps from the provider page.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Are the service providers verified?</summary>
+          <p>Yes, the platform is designed to help users connect with trusted providers across different service categories.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Can I track my booking after confirming it?</summary>
+          <p>Yes, you can follow the booking status and stay updated from confirmation through service completion.</p>
+        </details>
+        <details class="faq-item">
+          <summary>What services can I find on this platform?</summary>
+          <p>You can explore categories such as home maintenance, cleaning, tutoring, repairs, and other everyday services.</p>
+        </details>
+        <details class="faq-item">
+          <summary>How do I contact support if I need help?</summary>
+          <p>You can use the Contact Us form on the home page to send your question, concern, or support request to the team.</p>
+        </details>
+      </div>
+    </section>
   </main>
 
   {% include 'partials/footer.html' %}
+  <script>
+    (function () {
+      var contactSent = {{ contact_sent|yesno:"true,false" }};
+      if (contactSent) {
+        window.alert('Your message has been sent successfully.');
+      }
+
+      var sections = document.querySelectorAll('[data-reveal]');
+      if (!sections.length || !('IntersectionObserver' in window)) {
+        sections.forEach(function (section) {
+          section.classList.add('is-visible');
+        });
+        return;
+      }
+
+      var observer = new IntersectionObserver(function (entries, obs) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('is-visible');
+          obs.unobserve(entry.target);
+        });
+      }, {
+        threshold: 0.22,
+        rootMargin: '0px 0px -40px 0px'
+      });
+
+      sections.forEach(function (section) {
+        observer.observe(section);
+      });
+    })();
+  </script>
 </body>
 </html>
 

@@ -1,6 +1,8 @@
-from django.shortcuts import render
+from django.shortcuts import redirect, render
+from django.urls import reverse
 from services.constants import get_category_icon, normalize_category_name
 from services.models import Service
+from .models import ContactMessage
 
 
 # def hello(request):
@@ -8,6 +10,21 @@ from services.models import Service
 
 
 def home(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        email = request.POST.get('email', '').strip()
+        subject = request.POST.get('subject', '').strip()
+        message = request.POST.get('message', '').strip()
+
+        if name and email and subject and message:
+            ContactMessage.objects.create(
+                name=name,
+                email=email,
+                subject=subject,
+                message=message,
+            )
+            return redirect(f"{reverse('home')}?contact_sent=1")
+
     main_home_categories = [
         'Plumber',
         'Tutor',
@@ -48,4 +65,7 @@ def home(request):
             'image_url': category_image_map.get(category_key),
         })
 
-    return render(request, "core/index.html", {"home_categories": home_categories[:10]})
+    return render(request, "core/index.html", {
+        "home_categories": home_categories[:10],
+        "contact_sent": request.GET.get('contact_sent') == '1',
+    })

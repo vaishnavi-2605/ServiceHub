@@ -30,6 +30,11 @@
           </div>
 
           <div class="form-group">
+            {{ form.subcategory.label_tag }}
+            {{ form.subcategory }}
+          </div>
+
+          <div class="form-group">
             {{ form.description.label_tag }}
             {{ form.description }}
           </div>
@@ -62,6 +67,9 @@
             <img src="{{ s.image.url }}" alt="{{ s.name }}" class="provider-service-image">
           {% endif %}
           <p><strong>{{ s.name }}</strong></p>
+          {% if s.subcategory %}
+            <p><strong>Subfield:</strong> {{ s.subcategory }}</p>
+          {% endif %}
           <p class="provider-service-description">{{ s.description }}</p>
           <p><strong>Price:</strong> &#8377;{{ s.price }}</p>
           <div class="provider-service-actions">

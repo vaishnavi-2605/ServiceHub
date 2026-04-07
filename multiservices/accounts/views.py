@@ -10,9 +10,14 @@ from django.urls import reverse
 from django.views.decorators.cache import never_cache
 
 from booking.models import Booking, BookingReport
+from booking.core.models import ContactMessage
 from notifications.models import Notification
 from services.models import Service
-from services.constants import normalize_category_name
+from services.constants import (
+    SERVICE_SUBCATEGORY_MAP,
+    get_provider_registration_categories,
+    normalize_category_name,
+)
 
 from .forms import ProviderProfileForm, SignupForm, UserProfileForm
 from .models import CustomUser, ProviderProfile
@@ -86,6 +91,11 @@ def signup(request):
     if request.user.is_authenticated:
         return _redirect_dashboard_for_role(request.user)
 
+    signup_context = {
+        'provider_categories': get_provider_registration_categories(),
+        'provider_subcategory_map': SERVICE_SUBCATEGORY_MAP,
+    }
+
     if request.method == 'POST':
         form = SignupForm(request.POST)
         if form.is_valid():
@@ -104,7 +114,7 @@ def signup(request):
                     missing_docs.append('Aadhaar card upload is required.')
                 if missing_docs:
                     form.add_error(None, ' '.join(missing_docs))
-                    return render(request, 'accounts/signup.html', {'form': form})
+                    return render(request, 'accounts/signup.html', {'form': form, **signup_context})
 
             user = form.save()
 
@@ -114,9 +124,14 @@ def signup(request):
                 user.save(update_fields=['provider_status', 'is_active'])
                 category_raw = request.POST.get('category', '').strip()
                 category_other = request.POST.get('category_other', '').strip()
+                subcategory_raw = request.POST.get('subcategory', '').strip()
+                subcategory_other = request.POST.get('subcategory_other', '').strip()
                 if category_raw == 'Other' and category_other:
                     category_raw = category_other
+                if subcategory_raw == 'Other' and subcategory_other:
+                    subcategory_raw = subcategory_other
                 category = normalize_category_name(category_raw) or 'General Service'
+                subcategory = subcategory_raw.strip()
                 exp_raw = request.POST.get('experience', '0').strip()
                 service_time = request.POST.get('service_time', '').strip()
                 price_raw = request.POST.get('service_price', '').strip()
@@ -157,11 +172,15 @@ def signup(request):
 
                 profile.save()
 
-                Service.objects.get_or_create(
+                Service.objects.update_or_create(
                     provider=user,
                     name=category,
                     defaults={
-                        'description': f'Professional {category} service.',
+                        'subcategory': subcategory,
+                        'description': (
+                            f'Professional {category} service'
+                            + (f' for {subcategory}.' if subcategory else '.')
+                        ),
                         'price': price_value,
                         'available_time': service_time,
                         'available_days': '',
@@ -176,7 +195,7 @@ def signup(request):
     else:
         form = SignupForm()
 
-    return render(request, 'accounts/signup.html', {'form': form})
+    return render(request, 'accounts/signup.html', {'form': form, **signup_context})
 
 
 @login_required
@@ -197,13 +216,14 @@ def user_dashboard(request):
         history_range = 'all'
 
     bookings = Booking.objects.filter(user=request.user).select_related('provider', 'service').order_by('-created_at')
+    active_bookings = bookings.exclude(status__in=['completed', 'rejected'])
     history_bookings = bookings.filter(status__in=['completed', 'rejected'])
     history_bookings = _apply_history_range(history_bookings, history_range)
     notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')
     latest_notification = Notification.objects.filter(user=request.user).order_by('-id').first()
 
     total = bookings.count()
-    active = bookings.exclude(status='completed').count()
+    active = active_bookings.count()
     completed = bookings.filter(status='completed').count()
 
     provider_ids = [b.provider_id for b in bookings]
@@ -223,6 +243,7 @@ def user_dashboard(request):
 
     return render(request, 'accounts/user-dashboard.html', {
         'bookings': bookings,
+        'active_booking_list': active_bookings,
         'history_bookings': history_bookings,
         'user_service_history': user_service_history,
         'history_range': history_range,
@@ -258,6 +279,7 @@ def provider_dashboard(request):
         return render(request, 'accounts/provider-dashboard.html', {
             'pending_bookings': [],
             'active_bookings': [],
+            'ongoing_bookings': [],
             'completed_bookings': [],
             'history_bookings': [],
             'provider_service_history': [],
@@ -280,6 +302,11 @@ def provider_dashboard(request):
         provider=request.user,
         status__in=['accepted', 'in_progress']
     ).select_related('user', 'service').order_by('-created_at')
+    ongoing_bookings = sorted(
+        list(pending) + list(active),
+        key=lambda booking: booking.created_at,
+        reverse=True,
+    )
 
     completed = Booking.objects.filter(
         provider=request.user,
@@ -308,6 +335,7 @@ def provider_dashboard(request):
     return render(request, 'accounts/provider-dashboard.html', {
         'pending_bookings': pending,
         'active_bookings': active,
+        'ongoing_bookings': ongoing_bookings,
         'completed_bookings': completed,
         'history_bookings': history_bookings,
         'provider_service_history': provider_service_history,
@@ -423,6 +451,7 @@ def admin_dashboard(request):
             service['chart_height'] = int(((service['booking_count'] or 0) / max_chart_bookings) * 100)
 
     recent_reports = BookingReport.objects.select_related('booking', 'user', 'provider').order_by('-created_at')[:15]
+    contact_messages = ContactMessage.objects.all()[:20]
     top_services = list(services_qs[:5])
     latest_bookings = list(
         Booking.objects.select_related('user', 'provider', 'service').order_by('-created_at')[:6]
@@ -446,9 +475,22 @@ def admin_dashboard(request):
         'target_progress': target_progress,
         'target_remaining': target_remaining,
         'recent_reports': recent_reports,
+        'contact_messages': contact_messages,
         'top_services': top_services,
         'latest_bookings': latest_bookings,
     })
+
+
+@login_required
+def admin_delete_contact_message(request, message_id):
+    if not request.user.is_superuser:
+        return _redirect_dashboard_for_role(request.user)
+    if request.method != 'POST':
+        return redirect('admin_dashboard')
+
+    contact_message = get_object_or_404(ContactMessage, id=message_id)
+    contact_message.delete()
+    return redirect(f"{reverse('admin_dashboard')}?message_deleted=1")
 
 
 @login_required

@@ -52,12 +52,20 @@ class SignupForm(UserCreationForm):
     )
 
     password1 = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Min 8 characters'}),
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter at least 6 characters',
+            'minlength': '6',
+        }),
         label='Password'
     )
 
     password2 = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Confirm password'}),
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Confirm password',
+            'minlength': '6',
+        }),
         label='Confirm Password'
     )
 
@@ -72,6 +80,12 @@ class SignupForm(UserCreationForm):
         if not _is_valid_gmail(email):
             raise forms.ValidationError('Please enter valid email.')
         return email.lower()
+
+    def clean_password1(self):
+        password = self.cleaned_data.get('password1') or ''
+        if len(password) < 6:
+            raise forms.ValidationError('Password must be at least 6 characters.')
+        return password
 
 
 class UserProfileForm(forms.ModelForm):

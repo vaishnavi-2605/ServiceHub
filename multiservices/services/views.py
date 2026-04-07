@@ -72,6 +72,7 @@ def _is_india_coordinate(lat_value, lng_value):
 def service(request):
     query = request.GET.get('q', '').strip()
     category = normalize_category_name(request.GET.get('category', '').strip())
+    subcategory = request.GET.get('subcategory', '').strip()
     max_price = request.GET.get('max_price', '').strip()
     min_rating = request.GET.get('min_rating', '').strip()
     sort = request.GET.get('sort', '').strip()
@@ -109,6 +110,11 @@ def service(request):
             for term in category_terms:
                 category_filter |= Q(name__icontains=term)
             services_qs = services_qs.filter(category_filter)
+    else:
+        subcategory = ''
+
+    if subcategory:
+        services_qs = services_qs.filter(subcategory__iexact=subcategory)
 
     if max_price:
         try:
@@ -182,11 +188,34 @@ def service(request):
 
     all_categories = list(dict.fromkeys(DEFAULT_CATEGORIES + normalized_db_categories))
 
+    available_subcategories = []
+    if category:
+        category_terms = get_category_match_terms(category)
+        subcategory_qs = Service.objects.filter(
+            provider__is_active=True,
+            provider__provider_status='approved',
+        )
+        if category_terms:
+            subcategory_filter = Q()
+            for term in category_terms:
+                subcategory_filter |= Q(name__icontains=term)
+            subcategory_qs = subcategory_qs.filter(subcategory_filter)
+        subcategory_qs = (
+            subcategory_qs.exclude(subcategory='')
+            .exclude(subcategory__isnull=True)
+            .order_by('subcategory')
+            .values_list('subcategory', flat=True)
+            .distinct()
+        )
+        available_subcategories = list(subcategory_qs)
+
     return render(request, 'services/services.html', {
         'services': services_list,
         'query': query,
         'categories': all_categories,
         'selected_category': category,
+        'subcategories': available_subcategories,
+        'selected_subcategory': subcategory,
         'selected_max_price': max_price,
         'selected_min_rating': min_rating,
         'selected_sort': sort,

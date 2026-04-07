@@ -45,6 +45,12 @@
           <button type="button" class="toast-close" aria-label="Close">&times;</button>
         </div>
       {% endif %}
+      {% if request.GET.message_deleted == '1' %}
+        <div class="toast toast-success toast-visible toast-inline">
+          Contact message deleted successfully.
+          <button type="button" class="toast-close" aria-label="Close">&times;</button>
+        </div>
+      {% endif %}
 
       <section class="admin-stats">
         <div class="admin-stat-card">
@@ -103,6 +109,7 @@
               <thead>
                 <tr>
                   <th>Service</th>
+                  <th>Subfield</th>
                   <th>Provider</th>
                   <th>Bookings</th>
                 </tr>
@@ -111,12 +118,13 @@
                 {% for service in top_services %}
                   <tr>
                     <td>{{ service.name }}</td>
+                    <td>{{ service.subcategory|default:'-' }}</td>
                     <td>{{ service.provider.first_name|default:service.provider.username }}</td>
                     <td>{{ service.booking_count }}</td>
                   </tr>
                 {% empty %}
                   <tr>
-                    <td colspan="3" class="text-muted">No services found.</td>
+                    <td colspan="4" class="text-muted">No services found.</td>
                   </tr>
                 {% endfor %}
               </tbody>
@@ -237,6 +245,7 @@
             <thead>
               <tr>
                 <th>Service</th>
+                <th>Subfield</th>
                 <th>Provider</th>
                 <th>Price</th>
                 <th>Total bookings</th>
@@ -249,6 +258,7 @@
               {% for service in services %}
                 <tr>
                   <td>{{ service.name }}</td>
+                  <td>{{ service.subcategory|default:'-' }}</td>
                   <td>{{ service.provider.first_name|default:service.provider.username }}</td>
                   <td>&#8377;{{ service.price }}</td>
                   <td>{{ service.booking_count }}</td>
@@ -264,7 +274,7 @@
                 </tr>
               {% empty %}
                 <tr>
-                  <td colspan="7" class="text-muted">No services found.</td>
+                  <td colspan="8" class="text-muted">No services found.</td>
                 </tr>
               {% endfor %}
             </tbody>
@@ -311,6 +321,45 @@
               {% empty %}
                 <tr>
                   <td colspan="8" class="text-muted">No reports submitted yet.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-panel">
+        <h2 class="dashboard-section-title">Contact Messages</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Subject</th>
+                <th>Message</th>
+                <th>Received</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in contact_messages %}
+                <tr>
+                  <td>{{ item.name }}</td>
+                  <td>{{ item.email }}</td>
+                  <td>{{ item.get_subject_display }}</td>
+                  <td>{{ item.message|truncatechars:120 }}</td>
+                  <td>{{ item.created_at|date:"d M Y h:i A" }}</td>
+                  <td>
+                    <form method="post" action="{% url 'admin_delete_contact_message' item.id %}" class="admin-inline-form" onsubmit="return confirm('Delete this contact message?');">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="6" class="text-muted">No contact messages yet.</td>
                 </tr>
               {% endfor %}
             </tbody>

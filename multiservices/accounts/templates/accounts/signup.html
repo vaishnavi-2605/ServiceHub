@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign Up - Service Provider Platform</title>
+  <title>Register - Service Provider Platform</title>
   <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=20260224-6">
 </head>
 <body>
@@ -15,8 +15,9 @@
   <main class="auth-page">
     <div class="card auth-card auth-card-wide">
       <div class="card-body">
-        <h1>Sign Up</h1>
+        <h1>Register</h1>
         <p class="subtitle">Create your account as User or Service Provider.</p>
+        {{ provider_subcategory_map|json_script:"provider-subcategory-map" }}
 
         <form method="POST" action="{% url 'signup' %}" enctype="multipart/form-data">
           {% csrf_token %}
@@ -65,35 +66,44 @@
 
             <div class="form-group">
               <label>Experience (Years)</label>
-              <input type="number" name="experience" class="form-control" placeholder="e.g. 5">
+              <input type="number" name="experience" class="form-control" placeholder="e.g. 5" value="{{ form.data.experience|default:'' }}">
             </div>
 
             <div class="form-group">
               <label>Service Category</label>
               <select name="category" id="provider-category" class="form-control">
                 <option value="">Select a service</option>
-                <option value="Plumber">Plumber</option>
-                <option value="Tutor">Tutor</option>
-                <option value="Cleaning">Cleaning</option>
-                <option value="AC Repair">AC Repair</option>
-                <option value="Carpenter">Carpenter</option>
-                <option value="Other">Other</option>
+                {% for category in provider_categories %}
+                  <option value="{{ category }}" {% if form.data.category == category %}selected{% endif %}>{{ category }}</option>
+                {% endfor %}
               </select>
             </div>
 
             <div class="form-group hidden" id="provider-category-other">
               <label>Other Service</label>
-              <input type="text" name="category_other" class="form-control" placeholder="Enter service name">
+              <input type="text" name="category_other" class="form-control" placeholder="Enter service name" value="{{ form.data.category_other|default:'' }}">
+            </div>
+
+            <div class="form-group hidden" id="provider-subcategory-wrap">
+              <label>Service Subfield</label>
+              <select name="subcategory" id="provider-subcategory" class="form-control" data-selected="{{ form.data.subcategory|default:'' }}">
+                <option value="">Select a subfield</option>
+              </select>
+            </div>
+
+            <div class="form-group hidden" id="provider-subcategory-other">
+              <label>Other Subfield</label>
+              <input type="text" name="subcategory_other" class="form-control" placeholder="Enter subfield name" value="{{ form.data.subcategory_other|default:'' }}">
             </div>
 
             <div class="form-group">
               <label>Service Time (Availability)</label>
-              <input type="text" name="service_time" class="form-control" placeholder="e.g. 09:00 AM - 06:00 PM">
+              <input type="text" name="service_time" class="form-control" placeholder="e.g. 09:00 AM - 06:00 PM" value="{{ form.data.service_time|default:'' }}">
             </div>
 
             <div class="form-group">
               <label>Service Price (&#8377;)</label>
-              <input type="number" name="service_price" class="form-control" min="0" step="0.01" placeholder="e.g. 500">
+              <input type="number" name="service_price" class="form-control" min="0" step="0.01" placeholder="e.g. 500" value="{{ form.data.service_price|default:'' }}">
             </div>
 
             <div class="form-group">
@@ -136,7 +146,7 @@
         </form>
 
         <p class="auth-footer-text">
-          Already have an account? <a href="{% url 'signin' %}">Sign In</a>
+          Already have an account? <a href="{% url 'signin' %}">Login</a>
         </p>
       </div>
     </div>
@@ -151,6 +161,11 @@
       var providerRequiredFields = document.querySelectorAll(".provider-required");
       var providerCategory = document.getElementById("provider-category");
       var providerCategoryOther = document.getElementById("provider-category-other");
+      var providerSubcategoryWrap = document.getElementById("provider-subcategory-wrap");
+      var providerSubcategory = document.getElementById("provider-subcategory");
+      var providerSubcategoryOther = document.getElementById("provider-subcategory-other");
+      var subcategoryMapElement = document.getElementById("provider-subcategory-map");
+      var subcategoryMap = subcategoryMapElement ? JSON.parse(subcategoryMapElement.textContent) : {};
 
       function syncProviderFields() {
         var selected = document.querySelector("input[name='role']:checked");
@@ -163,6 +178,46 @@
         }
       }
 
+      function fillSubcategoryOptions(categoryValue) {
+        if (!providerSubcategory) return;
+        var selectedSubcategory = providerSubcategory.dataset.selected || "";
+        providerSubcategory.innerHTML = '<option value="">Select a subfield</option>';
+        (subcategoryMap[categoryValue] || []).forEach(function (item) {
+          var option = document.createElement("option");
+          option.value = item;
+          option.textContent = item;
+          if (item === selectedSubcategory) {
+            option.selected = true;
+          }
+          providerSubcategory.appendChild(option);
+        });
+      }
+
+      function syncSubcategoryOther() {
+        if (!providerSubcategory || !providerSubcategoryOther) return;
+        var isManualOtherCategory = providerCategory && providerCategory.value === "Other";
+        var isOther = isManualOtherCategory || providerSubcategory.value === "Other";
+        providerSubcategoryOther.classList.toggle("hidden", !isOther);
+        var otherInput = providerSubcategoryOther.querySelector("input");
+        if (otherInput) {
+          otherInput.required = isOther;
+        }
+      }
+
+      function syncSubcategory() {
+        if (!providerCategory || !providerSubcategoryWrap || !providerSubcategory) return;
+        var categoryValue = providerCategory.value;
+        var isOtherCategory = categoryValue === "Other";
+        var hasMappedSubcategories = !!subcategoryMap[categoryValue];
+        fillSubcategoryOptions(categoryValue);
+        providerSubcategoryWrap.classList.toggle("hidden", !hasMappedSubcategories || isOtherCategory);
+        providerSubcategory.required = hasMappedSubcategories && !isOtherCategory;
+        if (!hasMappedSubcategories || isOtherCategory) {
+          providerSubcategory.value = "";
+        }
+        syncSubcategoryOther();
+      }
+
       function syncCategoryOther() {
         if (!providerCategory || !providerCategoryOther) return;
         var isOther = providerCategory.value === "Other";
@@ -171,6 +226,7 @@
         if (otherInput) {
           otherInput.required = isOther;
         }
+        syncSubcategory();
       }
 
       radios.forEach(function (radio) {
@@ -178,6 +234,9 @@
       });
       if (providerCategory) {
         providerCategory.addEventListener("change", syncCategoryOther);
+      }
+      if (providerSubcategory) {
+        providerSubcategory.addEventListener("change", syncSubcategoryOther);
       }
 
       var password1 = document.getElementById("id_password1");
@@ -198,6 +257,7 @@
 
       syncProviderFields();
       syncCategoryOther();
+      syncSubcategory();
 
       var hasEmailError = '{{ form.email.errors|yesno:"1,0" }}' === '1';
       if (hasEmailError) {

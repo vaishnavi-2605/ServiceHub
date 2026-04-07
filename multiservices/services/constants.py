@@ -4,11 +4,64 @@ DEFAULT_CATEGORIES = [
     'Cleaning',
     'AC Repair',
     'Carpenter',
+    'Cosmetology',
     'Painter',
     'Pest Control',
     'Appliance Repair',
     'Salon',
 ]
+
+SERVICE_SUBCATEGORY_MAP = {
+    'Plumber': [
+        'Pipe Repair',
+        'Toilet Repair',
+        'Tap Installation',
+        'Drain Cleaning',
+        'Water Tank Fitting',
+        'Other',
+    ],
+    'Tutor': [
+        'Math Tutor',
+        'Science Tutor',
+        'English Tutor',
+        'Computer Tutor',
+        'Exam Preparation',
+        'Other',
+    ],
+    'Cleaning': [
+        'Home Cleaning',
+        'Bathroom Cleaning',
+        'Kitchen Cleaning',
+        'Sofa Cleaning',
+        'Deep Cleaning',
+        'Other',
+    ],
+    'AC Repair': [
+        'AC Installation',
+        'Gas Refill',
+        'Cooling Issue Repair',
+        'AC Maintenance',
+        'AC Cleaning',
+        'Other',
+    ],
+    'Carpenter': [
+        'Furniture Repair',
+        'Door Repair',
+        'Window Work',
+        'Modular Furniture',
+        'Wood Polishing',
+        'Other',
+    ],
+    'Cosmetology': [
+        'Hair Styling',
+        'Bridal Makeup',
+        'Facial Treatment',
+        'Skin Care',
+        'Nail Care',
+        'Pedicure',
+        'Other',
+    ],
+}
 
 
 CATEGORY_ICON_MAP = {
@@ -17,6 +70,7 @@ CATEGORY_ICON_MAP = {
     'cleaning': '\U0001F9F9',
     'ac repair': '\u2744\ufe0f',
     'carpenter': '\U0001FA9A',
+    'cosmetology': '\U0001F484',
     'painter': '\U0001F3A8',
     'pest control': '\U0001F6E1\ufe0f',
     'appliance repair': '\U0001F50C',
@@ -24,6 +78,9 @@ CATEGORY_ICON_MAP = {
 }
 
 CANONICAL_CATEGORY_MAP = {
+    'cosmetologist': 'Cosmetology',
+    'beautician': 'Cosmetology',
+    'beauty service': 'Cosmetology',
 }
 
 
@@ -64,3 +121,7 @@ def get_category_icon(category_name):
         if key in name_lower or name_lower in key:
             return icon
     return '\U0001F6E0\ufe0f'
+
+
+def get_provider_registration_categories():
+    return list(DEFAULT_CATEGORIES) + ['Other']

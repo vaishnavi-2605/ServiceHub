@@ -56,7 +56,7 @@
             <p class="muted profile-services-title">Services offered</p>
             <div class="service-chips">
               {% for s in provider_services %}
-                <span class="service-chip">{{ s.name }}</span>
+                <span class="service-chip">{{ s.name }}{% if s.subcategory %} - {{ s.subcategory }}{% endif %}</span>
               {% empty %}
                 <span class="muted">No services added yet.</span>
               {% endfor %}
@@ -91,7 +91,7 @@
       </div>
     </div>
 
-    <h2 class="dashboard-section-title">Requests (pending + active)</h2>
+    <h2 class="dashboard-section-title">Ongoing Services</h2>
     <div class="table-wrap dashboard-table-gap">
       <table>
         <thead>
@@ -106,11 +106,10 @@
           </tr>
         </thead>
         <tbody>
-          {% if pending_bookings or active_bookings %}
-            {% for booking in pending_bookings %}
+          {% for booking in ongoing_bookings %}
             <tr>
               <td>{{ booking.id }}</td>
-              <td>{{ booking.service_name }}</td>
+              <td>{{ booking.service_name }}{% if booking.service and booking.service.subcategory %} - {{ booking.service.subcategory }}{% endif %}</td>
               <td>{{ booking.user.first_name|default:booking.user.username }}</td>
               <td>{{ booking.date|date:"d M Y h:i A" }}</td>
               <td><span class="badge badge-{{ booking.status }}">{{ booking.status|title }}</span></td>
@@ -126,40 +125,20 @@
                 {% endif %}
               </td>
               <td>
-                <a href="{% url 'accept_booking' booking.id %}">Accept</a> |
-                <a href="{% url 'reject_booking' booking.id %}">Reject</a>
-              </td>
-            </tr>
-            {% endfor %}
-            {% for booking in active_bookings %}
-            <tr>
-              <td>{{ booking.id }}</td>
-              <td>{{ booking.service_name }}</td>
-              <td>{{ booking.user.first_name|default:booking.user.username }}</td>
-              <td>{{ booking.date|date:"d M Y h:i A" }}</td>
-              <td><span class="badge badge-{{ booking.status }}">{{ booking.status|title }}</span></td>
-              <td>
-                {% if booking.provider_marked_done or booking.status == 'completed' %}
-                  Hidden after completion
-                {% elif booking.latitude and booking.longitude %}
-                  <a href="https://maps.google.com/?q={{ booking.latitude }},{{ booking.longitude }}&hl=en&gl=in" target="_blank" rel="noopener">Live</a>
-                {% elif booking.service_address %}
-                  {{ booking.service_address }}
+                {% if booking.status == 'pending' %}
+                  <a href="{% url 'accept_booking' booking.id %}">Accept</a> |
+                  <a href="{% url 'reject_booking' booking.id %}">Reject</a>
                 {% else %}
-                  -
+                  <a href="{% url 'booking_status' booking.id %}">Open</a> |
+                  <a href="{% url 'reject_booking' booking.id %}">Reject</a>
                 {% endif %}
               </td>
-              <td>
-                <a href="{% url 'booking_status' booking.id %}">Open</a> |
-                <a href="{% url 'reject_booking' booking.id %}">Reject</a>
-              </td>
             </tr>
-            {% endfor %}
-          {% else %}
+          {% empty %}
             <tr>
-              <td colspan="7" class="text-muted">No requests yet.</td>
+              <td colspan="7" class="text-muted">No ongoing services right now.</td>
             </tr>
-          {% endif %}
+          {% endfor %}
         </tbody>
       </table>
     </div>
@@ -196,7 +175,7 @@
           {% for booking in history_bookings %}
             <tr>
               <td>{{ booking.id }}</td>
-              <td>{{ booking.service_name }}</td>
+              <td>{{ booking.service_name }}{% if booking.service and booking.service.subcategory %} - {{ booking.service.subcategory }}{% endif %}</td>
               <td>{{ booking.user.first_name|default:booking.user.username }}</td>
               <td>{{ booking.date|date:"d M Y h:i A" }}</td>
               <td>&#8377;{{ booking.amount }}</td>
